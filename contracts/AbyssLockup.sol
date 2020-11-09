@@ -38,6 +38,10 @@ pragma solidity ^0.6.0;
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
+/**
+ * Abyss Finance's AbyssLockup Contract
+ * A smart contract that stores tokens requested for withdrawal, as well as through which tokens are transferred from/to user and between contracts.
+ */
 contract AbyssLockup is Ownable {
     using SafeERC20 for IERC20;
 

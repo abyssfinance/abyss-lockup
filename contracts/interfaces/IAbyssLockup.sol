@@ -3,7 +3,7 @@
 pragma solidity ^0.6.0;
 
 /**
- * @dev Interface of the AFLockup smart contract.
+ * @dev Interface of the AbyssLockup smart contract.
  */
 interface IAbyssLockup {
 
