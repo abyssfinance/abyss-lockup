@@ -5,7 +5,7 @@ pragma solidity ^0.6.0;
 /**
  * @dev Interface of the AFLockup smart contract.
  */
-interface ILockup {
+interface IAbyssLockup {
 
     /**
      * @dev Moves `amount` tokens from the `sender` account to `recipient`.

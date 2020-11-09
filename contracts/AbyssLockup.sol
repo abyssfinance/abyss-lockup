@@ -60,7 +60,7 @@ contract AbyssLockup is Ownable {
     // ACTION FUNCTIONS
 
     /**
-     * @dev See {ILockup-externalTransfer}.
+     * @dev See {IAbyssLockup-externalTransfer}.
      */
     function externalTransfer(address token, address sender, address recipient, uint256 amount) external onlyContract(msg.sender) returns (bool) {
         if (sender == address(this)) {
