@@ -29,8 +29,6 @@
 /MMMMM-                sMMMMh    +MMMMm`      yMMMMy   -mMMMMMMMMMMMMMMMy    mMMMMo      `MMMMM:    .hMMMMMMMMMMMMN+     oNMMMMMMMMMMMMm:
 /MMMMM-                sMMMMh    +MMMMm`      yMMMMy    `/ymMMMMNhooMMMMy    mMMMMo      `MMMMM:      .+hmMMMMNmy/`       `/ydNMMMMNd*/
 
-// Abyss.Finance Lockup Service
-
 // SPDX-License-Identifier: MIT
 
 pragma solidity ^0.6.0;
