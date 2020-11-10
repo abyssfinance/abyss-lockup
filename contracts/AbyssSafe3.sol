@@ -1,33 +1,11 @@
 /*
-        .NMMMMMMMo          :MMMMN`
-        hMMMMMMMMM-         :MMMMN`
-       +MMMMmdMMMMd`        :MMMMN`
-      .NMMMM:`mMMMMo        :MMMMN`-+syhys+-    -ooooo.        -oooo+`   ./oyhhhyo/.        `:osyhhys+-
-      hMMMMs  /MMMMM-       :MMMMMmMMMMMMMMMm/   yMMMMd`      .NMMMMo  :dMMMMMMMMMMMd:    .yMMMMMMMMMMMm+
-     +MMMMm`   hMMMMd`      :MMMMMMMmyyhNMMMMMy  `hMMMMd`    `dMMMMs  :MMMMMdysydMMMMM:  `mMMMMmysyhNMMMMs
-    .NMMMM/    .NMMMMo      :MMMMMd-     /NMMMM+  `dMMMMh`   hMMMMh   oMMMMN/-.  /ssss/  .MMMMMo-.` -sssss
-    hMMMMMMMMMMMMMMMMM-     :MMMMM.       oMMMMd   `dMMMMy  sMMMMd`   .mMMMMMMMMNmhs:     yMMMMMMMMNmds/`
-   +MMMMMMMMMMMMMMMMMMd`    :MMMMN`       /MMMMm`   .mMMMMs+MMMMm.     `+hNMMMMMMMMMMm-    :ymMMMMMMMMMMNo
-  .NMMMMhsssssssssNMMMMo    :MMMMM:       yMMMMh     .mMMMMMMMMN-    `.....`.-:+odMMMMm` .....`.-:/ohMMMMM:
-  hMMMMd          oMMMMM-   :MMMMMN+`   .yMMMMM:      .mMMMMMMM:     .MMMMM+`    /MMMMN. hMMMMh.    .mMMMM+
- +MMMMN-          `dMMMMd`  :MMMMMMMMNmNMMMMMN/        -NMMMMM+       +MMMMMNmmmNMMMMMo  -mMMMMMNmmNMMMMMd`
-.NMMMMo            -MMMMMo  :MMMMNhNMMMMMMMNs.         .NMMMMs         -yNMMMMMMMMMNy:    `omMMMMMMMMMMd+`
-.-----              ------  `----- `-/+++/.           `dMMMMy             .:/++++:.          `-/++++/-`
-                                                      yMMMMd`
-.ooooooooooooooooooo.  odddds                        oMMMMm.
-/MMMMMMMMMMMMMMMMMMM:  yMMMMd                       -ddddd-
-/MMMMMMMMMMMMMMMMMMM:  oddddy
-/MMMMM:`````````````
-/MMMMM-                ommmmy    /mmmmh/hmMMMMNds.        :ydNMMMMNmh+.      hmmmm+odNMMMMNh+`        -ohNMMMMNmh+`       `+ymNMMMMNho.
-/MMMMM:```````````     sMMMMh    +MMMMMMMMMMMMMMMMo     -mMMMMMMMMMMMMNo     mMMMMMMMMMMMMMMMm-     .hMMMMMMMMMMMMNo    `sMMMMMMMMMMMMMh.
-/MMMMMMMMMMMMMMMM+     sMMMMh    +MMMMMMdo//+dMMMMM/    mMMMMh:..-+NMMMM/    mMMMMMNy+//sNMMMMm    :NMMMMd+:::sNMMMMo  `dMMMMd/-../hMMMMm.
-/MMMMMMMMMMMMMMMM+     sMMMMh    +MMMMM+      dMMMMy    ::+yhssssssmMMMMs    mMMMMm.     -MMMMM-  `mMMMMs      -oooo+  oMMMMMhyyyyyyNMMMMs
-/MMMMMs++++++++++-     sMMMMh    +MMMMm`      yMMMMy    /dMMMMMMMMMMMMMMy    mMMMMo      `MMMMM:  -MMMMM.              dMMMMMMMMMMMMMMMMMd
-/MMMMM-                sMMMMh    +MMMMm`      yMMMMy   sMMMMNyooooodMMMMy    mMMMMo      `MMMMM:  .MMMMM.              dMMMMhoooooooooooo/
-/MMMMM-                sMMMMh    +MMMMm`      yMMMMy  .NMMMM:     `dMMMMy    mMMMMo      `MMMMM:   mMMMMy      -hhhhy` +MMMMm`      /++++:
-/MMMMM-                sMMMMh    +MMMMm`      yMMMMy  `mMMMMd/--:omMMMMMy    mMMMMo      `MMMMM:   -NMMMMmo/:/sNMMMMo   hMMMMNs/::+hMMMMN:
-/MMMMM-                sMMMMh    +MMMMm`      yMMMMy   -mMMMMMMMMMMMMMMMy    mMMMMo      `MMMMM:    .hMMMMMMMMMMMMN+     oNMMMMMMMMMMMMm:
-/MMMMM-                sMMMMh    +MMMMm`      yMMMMy    `/ymMMMMNhooMMMMy    mMMMMo      `MMMMM:      .+hmMMMMNmy/`       `/ydNMMMMNd*/
+░█████╗░██████╗░██╗░░░██╗░██████╗░██████╗  ███████╗██╗███╗░░██╗░█████╗░███╗░░██╗░█████╗░███████╗
+██╔══██╗██╔══██╗╚██╗░██╔╝██╔════╝██╔════╝  ██╔════╝██║████╗░██║██╔══██╗████╗░██║██╔══██╗██╔════╝
+███████║██████╦╝░╚████╔╝░╚█████╗░╚█████╗░  █████╗░░██║██╔██╗██║███████║██╔██╗██║██║░░╚═╝█████╗░░
+██╔══██║██╔══██╗░░╚██╔╝░░░╚═══██╗░╚═══██╗  ██╔══╝░░██║██║╚████║██╔══██║██║╚████║██║░░██╗██╔══╝░░
+██║░░██║██████╦╝░░░██║░░░██████╔╝██████╔╝  ██║░░░░░██║██║░╚███║██║░░██║██║░╚███║╚█████╔╝███████╗
+╚═╝░░╚═╝╚═════╝░░░░╚═╝░░░╚═════╝░╚═════╝░  ╚═╝░░░░░╚═╝╚═╝░░╚══╝╚═╝░░╚═╝╚═╝░░╚══╝░╚════╝░╚══════╝
+*/
 
 // SPDX-License-Identifier: MIT
 
