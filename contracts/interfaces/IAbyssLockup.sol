@@ -12,7 +12,7 @@ interface IAbyssLockup {
      *
      * This function can be called only by `safeContract` smart contracts: {onlyContract} modifier.
      *
-     * All tokens are moved only from `AFLockup`smart contract so only one
+     * All tokens are moved only from `AbyssLockup`smart contract so only one
      * token approval is required.
      *
      * Returns a boolean value indicating whether the operation succeeded.

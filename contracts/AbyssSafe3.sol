@@ -49,7 +49,7 @@ contract AbyssSafe3 is ReentrancyGuard, Ownable {
     IERC20 public tokenContract;
     IAbyssLockup public lockupContract;
     uint256 private _freeDeposits;
-    uint256 private _monthsLockup;
+    uint256 private _lockupTime;
     uint256 private _abyssRequired;
 
     /**
@@ -91,12 +91,12 @@ contract AbyssSafe3 is ReentrancyGuard, Ownable {
     /**
      * @dev Stores the amount of Abyss required for withdrawals after deposit for the caller's address.
      */
-    mapping (address => uint256) private _prices;
+    mapping (address => uint256) private _hodls;
 
-    constructor(address token, address lockup, uint256 monthsLockup, uint256 abyssRequired, uint256 freeDeposits) public {
+    constructor(address token, address lockup, uint256 lockupTime, uint256 abyssRequired, uint256 freeDeposits) public {
         tokenContract = IERC20(address(token));
         lockupContract = IAbyssLockup(address(lockup));
-        _monthsLockup = monthsLockup;
+        _lockupTime = lockupTime;
         _abyssRequired = abyssRequired;
         _freeDeposits = freeDeposits;
     }
@@ -106,8 +106,8 @@ contract AbyssSafe3 is ReentrancyGuard, Ownable {
     /**
      * @dev Lockup delay after withdrawal request.
      */
-    function monthsLockup() public view returns (uint256) {
-        return _monthsLockup;
+    function lockupTime() public view returns (uint256) {
+        return _lockupTime;
     }
 
     /**
@@ -198,10 +198,10 @@ contract AbyssSafe3 is ReentrancyGuard, Ownable {
          * increases won’t affect pre-existing users until they make a new deposit.
          */
         if (_freeDeposits > 0) {
-            _prices[msg.sender] = 0;
+            _hodls[msg.sender] = 0;
             _freeDeposits = SafeMath.sub(_freeDeposits, 1);
         } else {
-            _prices[msg.sender] = _abyssRequired;
+            _hodls[msg.sender] = _abyssRequired;
         }
 
         /**
@@ -253,9 +253,9 @@ contract AbyssSafe3 is ReentrancyGuard, Ownable {
      */
     function withdrawalRequest(address token) external nonReentrant isAllowed(msg.sender, token) returns (bool) {
         require(
-            _prices[msg.sender] == 0 ||
+            _hodls[msg.sender] == 0 ||
             token == address(tokenContract) ||
-            tokenContract.balanceOf(msg.sender) >= _prices[msg.sender],
+            tokenContract.balanceOf(msg.sender) >= _hodls[msg.sender],
             "AbyssSafe: not enough Abyss");
         require(_data[msg.sender][token].requested == 0, "AbyssSafe: you already requested");
         require(_data[msg.sender][token].deposited > 0, "AbyssSafe: nothing to withdraw");
@@ -296,16 +296,17 @@ contract AbyssSafe3 is ReentrancyGuard, Ownable {
         }
 
         /**
-         * @dev Sets a date for `monthsLockup` months from the current date.
+         * @dev Sets a date for `lockupTime` seconds from the current date.
          */
-        _data[msg.sender][token].timestamp = SafeMath.add(block.timestamp, SafeMath.mul(_monthsLockup, 2592000));
+        _data[msg.sender][token].timestamp = SafeMath.add(block.timestamp, SafeMath.mul(_lockupTime, 2592000));
 
         emit Requested(msg.sender, token, _tempAmount);
 
         if (_tempBalance > 0) {
 
             /**
-             * @dev Sets a date for `monthsLockup` months from the current block time.
+             * @dev If `token` balance on this smart contract is greater than zero,
+             * sends tokens to the 'lockupContract' smart contract.
              */
             SafeERC20.safeTransfer(IERC20(address(token)), address(lockupContract), _tempAmount);
         }
@@ -385,9 +386,9 @@ contract AbyssSafe3 is ReentrancyGuard, Ownable {
      */
     function withdraw(address token) external nonReentrant isAllowed(msg.sender, token) returns (bool) {
         require(
-            _prices[msg.sender] == 0 ||
+            _hodls[msg.sender] == 0 ||
             token == address(tokenContract) ||
-            tokenContract.balanceOf(msg.sender) >= _prices[msg.sender],
+            tokenContract.balanceOf(msg.sender) >= _hodls[msg.sender],
             "AbyssSafe: not enough Abyss");
         require(_data[msg.sender][token].requested > 0, "AbyssSafe: request withdraw first");
         require(_data[msg.sender][token].timestamp < block.timestamp, "AbyssSafe: patience you must have!");
@@ -526,7 +527,7 @@ contract AbyssSafe3 is ReentrancyGuard, Ownable {
      * @dev Modifier that prohibits execution of this smart contract from `token` address
      */
     modifier isAllowed(address account, address token) {
-        require(account != token, "AbyssSafe: such use is prohibited");
+        require(account != token, "AbyssSafe: you shall not pass!");
         _;
     }
 

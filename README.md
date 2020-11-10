@@ -14,7 +14,7 @@ Below is a list of contracts we use for this service:
 
 <dl>
   <dt>SafeERC20, Ownable, ReentrancyGuard</dt>
-  <dd>Openzepellin smart contracts. The first one allows for safe transfer and approves ERC20 tokens. The second one allows for managing ownership. The last one protects from re-entrance attacks.</dd>
+  <dd>Openzepellin smart contracts. The first one allows to transfer and to approve ERC20 tokens safely.. The second one allows for managing ownership. The last one protects from re-entrance attacks.</dd>
 </dl>
 
 <dl>
@@ -46,8 +46,11 @@ To run lockup service, pull the repository from `GitHub` and install [Homebrew](
     brew install node
     npm install truffle -g
     npm install @openzeppelin/contracts
-    git clone https://github.com/abyssfinance/abyss-lockup
+    mkdir abyss-lockup
     cd abyss-lockup
+    truffle init
+    cd ..
+    git clone https://github.com/abyssfinance/abyss-lockup
 
 Setup your `truffle` environment, write migrations
 
