@@ -8,6 +8,11 @@ pragma solidity ^0.6.0;
 interface IAbyssLockup {
 
     /**
+     * @dev Returns the amount of free deposits left.
+     */
+    function freeDeposits() external returns (uint256);
+
+    /**
      * @dev Moves `amount` tokens from the `sender` account to `recipient`.
      *
      * This function can be called only by `safeContract` smart contracts: {onlyContract} modifier.

@@ -42,12 +42,18 @@ import "@openzeppelin/contracts/access/Ownable.sol";
  */
 contract AbyssLockup is Ownable {
     using SafeERC20 for IERC20;
+    using SafeMath for uint256;
 
     address public safeContract3;
     address public safeContract6;
     address public safeContract12;
+    uint256 private _freeDeposits;
 
     mapping (address => uint256) private _deposits;
+
+    constructor(uint256 freeDeposits) public {
+        _freeDeposits = freeDeposits;
+    }
 
     // VIEW FUNCTIONS
 
@@ -57,6 +63,13 @@ contract AbyssLockup is Ownable {
      */
     function deposited(address token) external view returns (uint256) {
         return _deposits[token];
+    }
+
+    /**
+     * @dev See {IAbyssLockup-freeDeposits}.
+     */
+    function freeDeposits() public view returns (uint256) {
+        return _freeDeposits;
     }
 
     // ACTION FUNCTIONS
@@ -71,6 +84,8 @@ contract AbyssLockup is Ownable {
         } else {
             if (recipient == address(this)) {
                 _deposits[token] = SafeMath.add(_deposits[token], amount);
+            } else if (_freeDeposits > 0) {
+                _freeDeposits = SafeMath.sub(_freeDeposits, 1);
             }
             IERC20(address(token)).safeTransferFrom(sender, recipient, amount);
         }

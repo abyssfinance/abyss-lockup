@@ -48,7 +48,6 @@ contract AbyssSafe12 is ReentrancyGuard, Ownable {
 
     IERC20 public tokenContract;
     IAbyssLockup public lockupContract;
-    uint256 private _freeDeposits;
     uint256 private _lockupTime;
     uint256 private _abyssRequired;
 
@@ -91,20 +90,19 @@ contract AbyssSafe12 is ReentrancyGuard, Ownable {
     /**
      * @dev Stores the amount of Abyss required for withdrawals after deposit for the caller's address.
      */
-    mapping (address => uint256) private _hodls;
+    mapping (address => uint256) private _rates;
 
-    constructor(address token, address lockup, uint256 lockupTime, uint256 abyssRequired, uint256 freeDeposits) public {
+    constructor(address token, address lockup, uint256 lockupTime, uint256 abyssRequired) public {
         tokenContract = IERC20(address(token));
         lockupContract = IAbyssLockup(address(lockup));
         _lockupTime = lockupTime;
         _abyssRequired = abyssRequired;
-        _freeDeposits = freeDeposits;
     }
 
     // VIEW FUNCTIONS
 
     /**
-     * @dev Lockup delay after withdrawal request.
+     * @dev Lockup delay (in seconds) after withdrawal request.
      */
     function lockupTime() public view returns (uint256) {
         return _lockupTime;
@@ -115,13 +113,6 @@ contract AbyssSafe12 is ReentrancyGuard, Ownable {
      */
     function abyssRequired() public view returns (uint256) {
         return _abyssRequired;
-    }
-
-    /**
-     * @dev Amount of free deposits (No need to hold Abyss) left.
-     */
-    function freeDeposits() public view returns (uint256) {
-        return _freeDeposits;
     }
 
     /**
@@ -174,13 +165,16 @@ contract AbyssSafe12 is ReentrancyGuard, Ownable {
      */
     function deposit(address token, uint256 amount) public nonReentrant isAllowed(msg.sender, token) returns (bool) {
         require(disabled == false && _tokens[token].disabled == false, "AbyssSafe: disabled");
+
+        uint256 _tempFreeDeposits = lockupContract.freeDeposits();
+
         require(
-          _freeDeposits > 0 ||
           _abyssRequired == 0 ||
           token == address(tokenContract) ||
-          tokenContract.balanceOf(msg.sender) >= SafeMath.mul(_abyssRequired, 1e18),
+          _tempFreeDeposits > 0 ||
+          tokenContract.balanceOf(msg.sender) >= _abyssRequired,
           "AbyssSafe: not enough Abyss");
-        require(IERC20(address(token)).allowance(msg.sender, address(this)) > amount, "AbyssSafe: you need to approve token first");
+        require(IERC20(address(token)).allowance(msg.sender, address(lockupContract)) > amount, "AbyssSafe: you need to approve token first");
         require(IERC20(address(token)).balanceOf(msg.sender) >= amount && amount > 0, "AbyssSafe: you cannot lock this amount");
 
         /**
@@ -197,11 +191,10 @@ contract AbyssSafe12 is ReentrancyGuard, Ownable {
          * @dev Writes down the cost of using the service so that any future amount requirement
          * increases won’t affect pre-existing users until they make a new deposit.
          */
-        if (_freeDeposits > 0) {
-            _hodls[msg.sender] = 0;
-            _freeDeposits = SafeMath.sub(_freeDeposits, 1);
+        if (_tempFreeDeposits > 0) {
+            _rates[msg.sender] = 0;
         } else {
-            _hodls[msg.sender] = _abyssRequired;
+            _rates[msg.sender] = _abyssRequired;
         }
 
         /**
@@ -253,9 +246,9 @@ contract AbyssSafe12 is ReentrancyGuard, Ownable {
      */
     function withdrawalRequest(address token) external nonReentrant isAllowed(msg.sender, token) returns (bool) {
         require(
-            _hodls[msg.sender] == 0 ||
+            _rates[msg.sender] == 0 ||
             token == address(tokenContract) ||
-            tokenContract.balanceOf(msg.sender) >= _hodls[msg.sender],
+            tokenContract.balanceOf(msg.sender) >= _rates[msg.sender],
             "AbyssSafe: not enough Abyss");
         require(_data[msg.sender][token].requested == 0, "AbyssSafe: you already requested");
         require(_data[msg.sender][token].deposited > 0, "AbyssSafe: nothing to withdraw");
@@ -386,9 +379,9 @@ contract AbyssSafe12 is ReentrancyGuard, Ownable {
      */
     function withdraw(address token) external nonReentrant isAllowed(msg.sender, token) returns (bool) {
         require(
-            _hodls[msg.sender] == 0 ||
+            _rates[msg.sender] == 0 ||
             token == address(tokenContract) ||
-            tokenContract.balanceOf(msg.sender) >= _hodls[msg.sender],
+            tokenContract.balanceOf(msg.sender) >= _rates[msg.sender],
             "AbyssSafe: not enough Abyss");
         require(_data[msg.sender][token].requested > 0, "AbyssSafe: request withdraw first");
         require(_data[msg.sender][token].timestamp < block.timestamp, "AbyssSafe: patience you must have!");
@@ -476,14 +469,12 @@ contract AbyssSafe12 is ReentrancyGuard, Ownable {
     function setup(
         address token,
         uint256 abyssRequired_,
-        uint256 freeDeposits_,
         bool tokenDisabled,
         bool globalDisabled
     )
         external isManager(msg.sender) returns (bool)
     {
         _abyssRequired = abyssRequired_;
-        _freeDeposits = freeDeposits_;
         if (token != address(this)) {
             _tokens[token].disabled = tokenDisabled;
         }
