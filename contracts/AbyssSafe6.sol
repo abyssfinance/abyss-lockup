@@ -318,7 +318,7 @@ contract AbyssSafe6 is ReentrancyGuard, Ownable {
         _tokens[token].requested = SafeMath.sub(_tokens[token].requested, _tempAmount);
 
         /**
-         * @dev Taking withdrawal request cancellation into account, resets the caller's `token` balance.
+         * @dev Taking withdrawal request cancellation into account, restores the caller's `token` balance.
          */
         _data[msg.sender][token].deposited = SafeMath.add(_data[msg.sender][token].deposited, _tempAmount);
 
@@ -398,6 +398,7 @@ contract AbyssSafe6 is ReentrancyGuard, Ownable {
              * @dev If there are no deposited tokens left, reset the unblocking time to zero.
              */
             delete _data[msg.sender][token].timestamp;
+            
         } else {
 
             /**
