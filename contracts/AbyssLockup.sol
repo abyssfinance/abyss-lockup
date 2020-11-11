@@ -55,14 +55,14 @@ contract AbyssLockup is Ownable {
     /**
      * @dev See {IAbyssLockup-externalTransfer}.
      */
-    function externalTransfer(address token, address sender, address recipient, uint256 amount) external onlyContract(msg.sender) returns (bool) {
+    function externalTransfer(address token, address sender, address recipient, uint256 amount, uint256 abyssRequired) external onlyContract(msg.sender) returns (bool) {
         if (sender == address(this)) {
             _deposits[token] = SafeMath.sub(_deposits[token], amount);
             IERC20(address(token)).safeTransfer(recipient, amount);
         } else {
             if (recipient == address(this)) {
                 _deposits[token] = SafeMath.add(_deposits[token], amount);
-            } else if (_freeDeposits > 0) {
+            } else if (abyssRequired > 0) {
                 _freeDeposits = SafeMath.sub(_freeDeposits, 1);
             }
             IERC20(address(token)).safeTransferFrom(sender, recipient, amount);

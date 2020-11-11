@@ -1,12 +1,3 @@
-/*
-░█████╗░██████╗░██╗░░░██╗░██████╗░██████╗  ███████╗██╗███╗░░██╗░█████╗░███╗░░██╗░█████╗░███████╗
-██╔══██╗██╔══██╗╚██╗░██╔╝██╔════╝██╔════╝  ██╔════╝██║████╗░██║██╔══██╗████╗░██║██╔══██╗██╔════╝
-███████║██████╦╝░╚████╔╝░╚█████╗░╚█████╗░  █████╗░░██║██╔██╗██║███████║██╔██╗██║██║░░╚═╝█████╗░░
-██╔══██║██╔══██╗░░╚██╔╝░░░╚═══██╗░╚═══██╗  ██╔══╝░░██║██║╚████║██╔══██║██║╚████║██║░░██╗██╔══╝░░
-██║░░██║██████╦╝░░░██║░░░██████╔╝██████╔╝  ██║░░░░░██║██║░╚███║██║░░██║██║░╚███║╚█████╔╝███████╗
-╚═╝░░╚═╝╚═════╝░░░░╚═╝░░░╚═════╝░╚═════╝░  ╚═╝░░░░░╚═╝╚═╝░░╚══╝╚═╝░░╚═╝╚═╝░░╚══╝░╚════╝░╚══════╝
-*/
-
 // SPDX-License-Identifier: MIT
 
 pragma solidity ^0.6.0;
@@ -31,6 +22,6 @@ interface IAbyssLockup {
      *
      * Returns a boolean value indicating whether the operation succeeded.
      */
-    function externalTransfer(address token, address sender, address recipient, uint256 amount) external returns (bool);
+    function externalTransfer(address token, address sender, address recipient, uint256 amount, uint256 abyssRequired) external returns (bool);
 
 }

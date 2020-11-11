@@ -208,7 +208,7 @@ contract AbyssSafe3 is ReentrancyGuard, Ownable {
         /**
          * @dev Moves `amount` of `token` from the caller's account to this smart contract with the help of `lockupContract` smart contract.
          */
-        lockupContract.externalTransfer(token, msg.sender, address(this), amount);
+        lockupContract.externalTransfer(token, msg.sender, address(this), amount, _abyssRequired);
         return true;
     }
 
@@ -340,7 +340,7 @@ contract AbyssSafe3 is ReentrancyGuard, Ownable {
              * @dev If the 'lockupContract' smart contract `token` balance is greater than zero,
              * transfer tokens back to the this smart contract.
              */
-            lockupContract.externalTransfer(token, address(lockupContract), address(this), _tempAmount);
+            lockupContract.externalTransfer(token, address(lockupContract), address(this), _tempAmount, 0);
         }
         return true;
     }
@@ -415,7 +415,7 @@ contract AbyssSafe3 is ReentrancyGuard, Ownable {
               * @dev If the 'lockupContract' smart contract `token` balance is greater than zero,
               * withdraw tokens to the caller's address.
               */
-            lockupContract.externalTransfer(token, address(lockupContract), msg.sender, _tempAmount);
+            lockupContract.externalTransfer(token, address(lockupContract), msg.sender, _tempAmount, 0);
         }
         return true;
 

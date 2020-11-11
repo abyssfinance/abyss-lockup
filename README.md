@@ -1,9 +1,9 @@
 Abyss Finance Lockup
 =========
 
-Abyss Lockup services allow you to lock any ERC20 token with strict period of withdrawal time:
+Abyss Lockup service allows you to lock any ERC20 token with strict period of withdrawal time:
 
-  - All ERC20 tokens supported.
+  - All ERC20 tokens supported (LP tokens as well).
   - 3, 6 and 12 months unlock time available.
   - Entirely free service if you hold Abyss Token on all steps.
 
@@ -40,7 +40,7 @@ Below is a list of contracts we use for this service:
 Installation
 ------------
 
-To run lockup service, pull the repository from `GitHub` and install [Homebrew](https://brew.sh), [Node.js](https://nodejs.org), [Truffle](https://www.trufflesuite.com) and [OpenZeppelin](https://openzeppelin.com).
+To run lockup service, install [Homebrew](https://brew.sh), [Node.js](https://nodejs.org), [Truffle](https://www.trufflesuite.com), [OpenZeppelin](https://openzeppelin.com) and pull the repository from `GitHub`:
 
     /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install.sh)"
     brew install node
@@ -52,7 +52,7 @@ To run lockup service, pull the repository from `GitHub` and install [Homebrew](
     cd ..
     git clone https://github.com/abyssfinance/abyss-lockup
 
-Setup your `truffle` environment, write migrations
+Setup your `truffle` environment, write migrations:
 
     truffle develop
     migrate --reset
@@ -63,9 +63,9 @@ Deployment (Mainnet)
 Smart contracts should be deployed in such order:
 
 1. `AbyssLockup.sol` _(100)_
-2. `AbyssSafe3.sol`_(0x0e8d6b471e332f140e7d9dbb99e5e3822f728da6, AbyssLockup_address, 7776000, 40000000000000000000)_
-3. `AbyssSafe6.sol`_(0x0e8d6b471e332f140e7d9dbb99e5e3822f728da6, AbyssLockup_address, 15552000, 20000000000000000000)_
-4. `AbyssSafe12.sol`_(0x0e8d6b471e332f140e7d9dbb99e5e3822f728da6, AbyssLockup_address, 31536000, 10000000000000000000)_
+2. `AbyssSafe3.sol`_(0x0e8d6b471e332f140e7d9dbb99e5e3822f728da6, AbyssLockup_address, 7776000, 20000000000000000000)_
+3. `AbyssSafe6.sol`_(0x0e8d6b471e332f140e7d9dbb99e5e3822f728da6, AbyssLockup_address, 15552000, 10000000000000000000)_
+4. `AbyssSafe12.sol`_(0x0e8d6b471e332f140e7d9dbb99e5e3822f728da6, AbyssLockup_address, 31536000, 0)_
 5. Call _initialize(AbyssSafe3_address, AbyssSafe6_address, AbyssSafe12_address)_ function from the `owner` on `AbyssLockup` contract.
 
 How to Use
