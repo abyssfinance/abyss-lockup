@@ -44,8 +44,8 @@ To run lockup service, install [Homebrew](https://brew.sh), [Node.js](https://no
 
     /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install.sh)"
     brew install node
-    npm install truffle -g
-    npm install @openzeppelin/contracts
+    npm install -g truffle
+    npm install -g @openzeppelin/contracts
     mkdir abyss-lockup
     cd abyss-lockup
     truffle init
@@ -63,8 +63,8 @@ Deployment (Mainnet)
 Smart contracts should be deployed in such order:
 
 1. `AbyssLockup.sol` _(100)_
-2. `AbyssSafe3.sol`_(0x0e8d6b471e332f140e7d9dbb99e5e3822f728da6, AbyssLockup_address, 7776000, 20000000000000000000)_
-3. `AbyssSafe6.sol`_(0x0e8d6b471e332f140e7d9dbb99e5e3822f728da6, AbyssLockup_address, 15552000, 10000000000000000000)_
+2. `AbyssSafe3.sol`_(0x0e8d6b471e332f140e7d9dbb99e5e3822f728da6, AbyssLockup_address, 7776000, 20000000000000000000000)_
+3. `AbyssSafe6.sol`_(0x0e8d6b471e332f140e7d9dbb99e5e3822f728da6, AbyssLockup_address, 15552000, 10000000000000000000000)_
 4. `AbyssSafe12.sol`_(0x0e8d6b471e332f140e7d9dbb99e5e3822f728da6, AbyssLockup_address, 31536000, 0)_
 5. Call _initialize(AbyssSafe3_address, AbyssSafe6_address, AbyssSafe12_address)_ function from the `owner` on `AbyssLockup` contract.
 
