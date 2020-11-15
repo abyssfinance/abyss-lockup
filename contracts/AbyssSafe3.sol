@@ -144,14 +144,13 @@ contract AbyssSafe3 is ReentrancyGuard, Ownable {
     function deposit(address token, uint256 amount) public nonReentrant isAllowed(msg.sender, token) returns (bool) {
         require(disabled == false && _tokens[token].disabled == false, "AbyssSafe: disabled");
 
-        uint256 _tempFreeDeposits = lockupContract.freeDeposits();
+        uint256 _tempFreeDeposits;
 
-        require(
-          _abyssRequired == 0 ||
-          token == address(tokenContract) ||
-          _tempFreeDeposits > 0 ||
-          tokenContract.balanceOf(msg.sender) >= _abyssRequired,
-          "AbyssSafe: not enough Abyss");
+        if (_abyssRequired > 0 && token != address(tokenContract)) {
+            _tempFreeDeposits = lockupContract.freeDeposits();
+            require(_tempFreeDeposits > 0 || tokenContract.balanceOf(msg.sender) >= _abyssRequired, "AbyssSafe: not enough Abyss");
+        }
+
         require(IERC20(address(token)).allowance(msg.sender, address(lockupContract)) > amount, "AbyssSafe: you need to approve token first");
         require(IERC20(address(token)).balanceOf(msg.sender) >= amount && amount > 0, "AbyssSafe: you cannot lock this amount");
 
