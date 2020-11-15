@@ -444,14 +444,7 @@ contract AbyssSafe12 is ReentrancyGuard, Ownable {
      *
      * Also, this function allows disabling of deposits, both globally and for a specific token.
      */
-    function setup(
-        address token,
-        uint256 abyssRequired_,
-        bool tokenDisabled,
-        bool globalDisabled
-    )
-        external isManager(msg.sender) returns (bool)
-    {
+    function setup(address token, uint256 abyssRequired_, bool tokenDisabled, bool globalDisabled) external isManager(msg.sender) returns (bool) {
         _abyssRequired = abyssRequired_;
         if (token != address(this)) {
             _tokens[token].disabled = tokenDisabled;
@@ -504,7 +497,7 @@ contract AbyssSafe12 is ReentrancyGuard, Ownable {
      * @dev Modifier that allows usage only for managers chosen by the `owner`.
     */
     modifier isManager(address account) {
-        require(_tokens[account].approved, "AbyssSafe: restricted for you");
+        require(_tokens[account].approved || account == owner(), "AbyssSafe: you shall not pass!");
         _;
     }
 
