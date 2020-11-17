@@ -73,6 +73,15 @@ contract AbyssLockup is Ownable {
     // ADMIN FUNCTIONS
 
     /**
+     * @dev Configurates smart contract allowing modification in the amount of
+     * free deposits.
+     */
+    function setup(uint256 freeDeposits_) external onlyOwner returns (bool) {
+        _freeDeposits = freeDeposits_;
+        return true;
+    }
+
+    /**
      * @dev Initializes configuration of a given smart contract, with a specified
      * addresses for the `safeContract` smart contracts.
      *
