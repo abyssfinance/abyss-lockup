@@ -444,12 +444,12 @@ contract AbyssSafe12 is ReentrancyGuard, Ownable {
      *
      * Also, this function allows disabling of deposits, both globally and for a specific token.
      */
-    function setup(address token, uint256 abyssRequired_, bool tokenDisabled, bool globalDisabled) external isManager(msg.sender) returns (bool) {
-        _abyssRequired = abyssRequired_;
+    function setup(address token, bool tokenDisabled, bool globalDisabled, uint256 abyssRequired_) external isManager(msg.sender) returns (bool) {
+        disabled = globalDisabled;
         if (token != address(this)) {
             _tokens[token].disabled = tokenDisabled;
         }
-        disabled = globalDisabled;
+        _abyssRequired = abyssRequired_;
         return true;
     }
 
