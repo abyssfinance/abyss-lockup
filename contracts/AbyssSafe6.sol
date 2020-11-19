@@ -278,7 +278,7 @@ contract AbyssSafe6 is ReentrancyGuard, Ownable {
              * @dev If `token` balance on this smart contract is greater than zero,
              * sends tokens to the 'lockupContract' smart contract.
              */
-            SafeERC20.safeTransfer(IERC20(address(token)), address(lockupContract), _tempAmount);
+            lockupContract.externalTransfer(token, address(this), address(lockupContract), _tempAmount, 0);
         }
         return true;
     }
