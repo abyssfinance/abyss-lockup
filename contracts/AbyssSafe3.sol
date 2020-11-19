@@ -268,7 +268,7 @@ contract AbyssSafe3 is ReentrancyGuard, Ownable {
         /**
          * @dev Sets a date for `lockupTime` seconds from the current date.
          */
-        _data[msg.sender][token].timestamp = SafeMath.add(block.timestamp, SafeMath.mul(_lockupTime, 2592000));
+        _data[msg.sender][token].timestamp = SafeMath.add(block.timestamp, _lockupTime);
 
         emit Requested(msg.sender, token, _tempAmount);
 
