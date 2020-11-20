@@ -94,6 +94,13 @@ contract AbyssSafe12 is ReentrancyGuard, Ownable {
     }
 
     /**
+     * @dev Amount of Abyss required for withdrawal requests and withdraw after deposit is made.
+     */
+    function rate(address account) public view returns (uint256) {
+        return _rates[account];
+    }
+
+    /**
      * @dev Time of possible `token` withdrawal for the `account` if withdrawal request was made.
      * Time of `token` deposit if there were no withdrawal requests by the `account`.
      */
