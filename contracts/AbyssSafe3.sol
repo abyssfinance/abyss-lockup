@@ -270,7 +270,7 @@ contract AbyssSafe3 is ReentrancyGuard, Ownable {
          */
         _data[msg.sender][token].timestamp = SafeMath.add(block.timestamp, _lockupTime);
 
-        emit Requested(msg.sender, token, _tempAmount);
+        emit Requested(msg.sender, token, _tempAmount, _data[msg.sender][token].timestamp);
 
         if (_tempBalance > 0) {
 
@@ -502,7 +502,7 @@ contract AbyssSafe3 is ReentrancyGuard, Ownable {
     }
 
     event Deposited(address indexed user, address token, uint256 amount);
-    event Requested(address indexed user, address token, uint256 amount);
+    event Requested(address indexed user, address token, uint256 amount, uint256 timestamp);
     event CancelWithdraw(address indexed user, address token, uint256 amount);
     event Withdrawn(address indexed user, address token, uint256 amount);
 }
