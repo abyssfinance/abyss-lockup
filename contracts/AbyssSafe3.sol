@@ -209,7 +209,7 @@ contract AbyssSafe3 is ReentrancyGuard, Ownable {
             _tokens[token].approved = true;
         }
 
-        emit Deposited(msg.sender, token, amount);
+        emit Deposit(msg.sender, token, amount);
 
         /**
          * @dev Moves `amount` of `token` from the caller's account to this smart contract with the help of `lockupContract` smart contract.
@@ -228,7 +228,7 @@ contract AbyssSafe3 is ReentrancyGuard, Ownable {
      * - The caller has any amount of `token` deposited to this smart contract.
      * - User’s balance is greater than zero and greater than the amount they intend to deposit.
      */
-    function withdrawalRequest(address token) external nonReentrant isAllowed(msg.sender, token) returns (bool) {
+    function request(address token, uint256 amount) external nonReentrant isAllowed(msg.sender, token) returns (bool) {
         require(
             _rates[msg.sender] == 0 ||
             token == address(tokenContract) ||
@@ -236,57 +236,48 @@ contract AbyssSafe3 is ReentrancyGuard, Ownable {
             "AbyssSafe: not enough Abyss");
         require(_data[msg.sender][token].requested == 0, "AbyssSafe: you already requested");
         require(_data[msg.sender][token].deposited > 0, "AbyssSafe: nothing to withdraw");
+        require(_data[msg.sender][token].deposited >= amount && amount > 0, "AbyssSafe: you cannot withdraw this amount");
+
+        uint256 _tempBalance = IERC20(address(token)).balanceOf(address(this));
+        require(_tempBalance > 0, "AbyssSafe: something went wrong");
+
+        /**
+         * @dev Protection against unforeseen situations such as when the amount of withdrawal
+         * requested is greater than the amount of `token` balance on this smart contract.
+         * If caller's deposit is more than the real balance of `token` on this smart contract,
+         * then only remaining `token` balance will be transferred to 'lockupContract' smart contract.
+         */
+        if (amount > _tempBalance) {
+            amount = _tempBalance;
+        }
 
         /**
          * @dev Changes the total amount of deposited `token` by the amount of withdrawing request in the decreasing direction.
          */
-        _tokens[token].deposited = SafeMath.sub(_tokens[token].deposited, _data[msg.sender][token].deposited);
+        _tokens[token].deposited = SafeMath.sub(_tokens[token].deposited, amount);
 
         /**
          * @dev Changes the total amount of requested `token by the sum of the withdrawing request in the increasing direction.
          */
-        _tokens[token].requested = SafeMath.add(_tokens[token].requested, _data[msg.sender][token].deposited);
-
-        uint256 _tempAmount = _data[msg.sender][token].deposited;
+        _tokens[token].requested = SafeMath.add(_tokens[token].requested, amount);
 
         /**
          * @dev The requested amount of the caller's tokens for withdrawal request becomes equal to their deposit of `token`.
          */
-        _data[msg.sender][token].requested = _data[msg.sender][token].deposited;
-
-        /**
-         * @dev Resets the caller's token deposit.
-         */
-        delete _data[msg.sender][token].deposited;
-
-        uint256 _tempBalance = IERC20(address(token)).balanceOf(address(this));
-
-        if (_tempAmount > _tempBalance) {
-
-            /**
-             * @dev Protection against unforeseen situations such as when the amount of withdrawal
-             * requested is greater than the amount of `token` balance on this smart contract.
-             * If caller's deposit is more than the real balance of `token` on this smart contract,
-             * then only remaining `token` balance will be transferred to 'lockupContract' smart contract.
-             */
-            _tempAmount = _tempBalance;
-        }
+        _data[msg.sender][token].requested = amount;
 
         /**
          * @dev Sets a date for `lockupTime` seconds from the current date.
          */
         _data[msg.sender][token].timestamp = SafeMath.add(block.timestamp, _lockupTime);
 
-        emit Requested(msg.sender, token, _tempAmount, _data[msg.sender][token].timestamp);
+        emit Request(msg.sender, token, amount, _data[msg.sender][token].timestamp);
 
-        if (_tempBalance > 0) {
-
-            /**
-             * @dev If `token` balance on this smart contract is greater than zero,
-             * sends tokens to the 'lockupContract' smart contract.
-             */
-            lockupContract.externalTransfer(token, address(this), address(lockupContract), _tempAmount, 0);
-        }
+        /**
+         * @dev If `token` balance on this smart contract is greater than zero,
+         * sends tokens to the 'lockupContract' smart contract.
+         */
+        lockupContract.externalTransfer(token, address(this), address(lockupContract), amount, 0);
         return true;
     }
 
@@ -297,19 +288,20 @@ contract AbyssSafe3 is ReentrancyGuard, Ownable {
      *
      * - There is a pending active withdrawal request for `token` by the caller's account.
      */
-    function cancelWithdraw(address token) external nonReentrant isAllowed(msg.sender, token) returns (bool) {
+    function cancel(address token) external nonReentrant isAllowed(msg.sender, token) returns (bool) {
         require(_data[msg.sender][token].requested > 0, "AbyssSafe: nothing to cancel");
 
         uint256 _tempAmount = _data[msg.sender][token].requested;
         uint256 _tempBalance = IERC20(address(token)).balanceOf(address(lockupContract));
+        require(_tempBalance > 0, "AbyssSafe: something went wrong");
 
+        /**
+         * Protection against unforeseen situations such as cancelation of withdrawal request and `token` reimbursement
+         * to the smart contract in a sum greater than the token balance of the 'lockupContract' smart contract.
+         * If the caller's requested amount is more than the real balance of `token` on the 'lockupContract' smart contract,
+         * then only remaining `token` balance will be transferred back to this smart contract.
+         */
         if (_tempAmount > _tempBalance) {
-            /**
-             * Protection against unforeseen situations such as cancelation of withdrawal request and `token` reimbursement
-             * to the smart contract in a sum greater than the token balance of the 'lockupContract' smart contract.
-             * If the caller's requested amount is more than the real balance of `token` on the 'lockupContract' smart contract,
-             * then only remaining `token` balance will be transferred back to this smart contract.
-             */
             _tempAmount = _tempBalance;
         }
 
@@ -321,7 +313,7 @@ contract AbyssSafe3 is ReentrancyGuard, Ownable {
         /**
          * @dev Changes the total amount of requested `token` by the cancelation withdrawal amount in the decreasing direction.
          */
-        _tokens[token].requested = SafeMath.sub(_tokens[token].requested, _tempAmount);
+        _tokens[token].requested = SafeMath.sub(_tokens[token].requested, _data[msg.sender][token].requested);
 
         /**
          * @dev Taking withdrawal request cancellation into account, restores the caller's `token` balance.
@@ -336,18 +328,12 @@ contract AbyssSafe3 is ReentrancyGuard, Ownable {
         /**
          * @dev Resets the date when `token` can be withdrawn by setting the current block time.
          */
+
+        emit Cancel(msg.sender, token, _tempAmount, _data[msg.sender][token].timestamp);
+
         _data[msg.sender][token].timestamp = block.timestamp;
 
-        emit CancelWithdraw(msg.sender, token, _tempAmount);
-
-        if (_tempBalance > 0) {
-
-            /**
-             * @dev If the 'lockupContract' smart contract `token` balance is greater than zero,
-             * transfer tokens back to the this smart contract.
-             */
-            lockupContract.externalTransfer(token, address(lockupContract), address(this), _tempAmount, 0);
-        }
+        lockupContract.externalTransfer(token, address(lockupContract), address(this), _tempAmount, 0);
         return true;
     }
 
@@ -371,6 +357,8 @@ contract AbyssSafe3 is ReentrancyGuard, Ownable {
         require(_data[msg.sender][token].timestamp < block.timestamp, "AbyssSafe: patience you must have!");
 
         uint256 _tempAmount = _data[msg.sender][token].requested;
+        uint256 _tempBalance = IERC20(address(token)).balanceOf(address(lockupContract));
+        require(_tempBalance > 0, "AbyssSafe: something went wrong");
 
         /**
          * @dev Changes the total amount of requested `token` for withdrawing by the sum of the withdraw in the decreasing direction.
@@ -382,18 +370,17 @@ contract AbyssSafe3 is ReentrancyGuard, Ownable {
          */
         _data[msg.sender][token].requested = SafeMath.sub(_data[msg.sender][token].requested, _tempAmount);
 
-        uint256 _tempBalance = IERC20(address(token)).balanceOf(address(lockupContract));
-
+        /**
+         * @dev Protection against unforeseen situations such as when withdrawal amount is greater
+         * than `token` balance on the 'lockupContract' smart contract. If the caller's withdrawal amount
+         * is more than the real balance of `token` on the 'lockupContract' smart contract, then
+         * only remaining `token` balance will be transferred to the caller's address.
+         */
         if (_tempAmount > _tempBalance) {
-
-            /**
-             * @dev Protection against unforeseen situations such as when withdrawal amount is greater
-             * than `token` balance on the 'lockupContract' smart contract. If the caller's withdrawal amount
-             * is more than the real balance of `token` on the 'lockupContract' smart contract, then
-             * only remaining `token` balance will be transferred to the caller's address.
-             */
             _tempAmount = _tempBalance;
         }
+
+        emit Withdraw(msg.sender, token, _tempAmount, _data[msg.sender][token].timestamp);
 
         /**
          * @dev Verifies that the caller has not deposited any `token` after withdrawal request was made.
@@ -413,16 +400,11 @@ contract AbyssSafe3 is ReentrancyGuard, Ownable {
             _data[msg.sender][token].timestamp = block.timestamp;
         }
 
-        emit Withdrawn(msg.sender, token, _tempAmount);
-
-        if (_tempBalance > 0) {
-
-             /**
-              * @dev If the 'lockupContract' smart contract `token` balance is greater than zero,
-              * withdraw tokens to the caller's address.
-              */
-            lockupContract.externalTransfer(token, address(lockupContract), msg.sender, _tempAmount, 0);
-        }
+        /**
+         * @dev If the 'lockupContract' smart contract `token` balance is greater than zero,
+         * withdraw tokens to the caller's address.
+         */
+        lockupContract.externalTransfer(token, address(lockupContract), msg.sender, _tempAmount, 0);
         return true;
 
     }
@@ -508,8 +490,8 @@ contract AbyssSafe3 is ReentrancyGuard, Ownable {
         _;
     }
 
-    event Deposited(address indexed user, address token, uint256 amount);
-    event Requested(address indexed user, address token, uint256 amount, uint256 timestamp);
-    event CancelWithdraw(address indexed user, address token, uint256 amount);
-    event Withdrawn(address indexed user, address token, uint256 amount);
+    event Deposit(address indexed user, address token, uint256 amount);
+    event Request(address indexed user, address token, uint256 amount, uint256 timestamp);
+    event Cancel(address indexed user, address token, uint256 amount, uint256 timestamp);
+    event Withdraw(address indexed user, address token, uint256 amount, uint256 timestamp);
 }
