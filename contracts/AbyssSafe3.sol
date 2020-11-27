@@ -262,9 +262,14 @@ contract AbyssSafe3 is ReentrancyGuard, Ownable {
         _tokens[token].requested = SafeMath.add(_tokens[token].requested, amount);
 
         /**
-         * @dev The requested amount of the caller's tokens for withdrawal request becomes equal to their deposit of `token`.
+         * @dev The requested amount of the caller's tokens for withdrawal request becomes equal to the amount requested.
          */
         _data[msg.sender][token].requested = amount;
+
+        /**
+         * @dev Changes the caller's amount of deposited `token` by the amount of withdrawing request in the decreasing direction.
+         */
+        _data[msg.sender][token].deposited = SafeMath.sub(_data[msg.sender][token].deposited, amount);
 
         /**
          * @dev Sets a date for `lockupTime` seconds from the current date.
