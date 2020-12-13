@@ -27,7 +27,12 @@ contract AbyssLockup is Ownable {
     address public safeContract12;
     uint256 private _freeDeposits;
 
-    mapping (address => uint256) private _deposits;
+    struct Token {
+        uint256 deposited;
+        uint256 divFactor;
+    }
+
+    mapping (address => Token) private _tokens;
 
     constructor(uint256 freeDeposits) public {
         _freeDeposits = freeDeposits;
@@ -36,11 +41,17 @@ contract AbyssLockup is Ownable {
     // VIEW FUNCTIONS
 
     /**
-     * @dev Returns amount requested for the `token` withdrawal
-     * on all `safeContract` smart contracts.
+     * @dev See {IAbyssLockup-deposited}.
      */
     function deposited(address token) external view returns (uint256) {
-        return _deposits[token];
+        return _tokens[token].deposited;
+    }
+
+    /**
+     * @dev See {IAbyssLockup-divFactor}.
+     */
+    function divFactor(address token) external view returns (uint256) {
+        return _tokens[token].divFactor;
     }
 
     /**
@@ -55,18 +66,28 @@ contract AbyssLockup is Ownable {
     /**
      * @dev See {IAbyssLockup-externalTransfer}.
      */
-    function externalTransfer(address token, address sender, address recipient, uint256 amount, uint256 abyssRequired) external onlyContract(msg.sender) returns (bool) {
+    function externalTransfer(address token, address sender, address recipient, uint256 amount, uint256 abyssRequired, uint256 balance, uint256 divFactor_) external onlyContract(msg.sender) returns (bool) {
         if (sender == address(this)) {
-            _deposits[token] = SafeMath.sub(_deposits[token], amount);
+            _tokens[token].deposited = SafeMath.sub(_tokens[token].deposited, amount);
             IERC20(address(token)).safeTransfer(recipient, amount);
         } else {
             if (recipient == address(this)) {
-                _deposits[token] = SafeMath.add(_deposits[token], amount);
+                _tokens[token].deposited = SafeMath.add(_tokens[token].deposited, amount);
             } else if (abyssRequired > 0) {
                 _freeDeposits = SafeMath.sub(_freeDeposits, 1);
             }
             IERC20(address(token)).safeTransferFrom(sender, recipient, amount);
         }
+        if (divFactor_ == 1) {
+            delete _tokens[token].divFactor;
+        } else if (divFactor_ > 0) {
+            _tokens[token].divFactor = divFactor_;
+        }
+
+        if (balance > 0) {
+            _tokens[token].deposited = balance;
+        }
+
         return true;
     }
 
@@ -97,17 +118,17 @@ contract AbyssLockup is Ownable {
 
     /**
      * @dev A function that allows the `owner` to withdraw any locked and lost tokens
-     * from the smart contract.
+     * from the smart contract if such `token` is not yet deposited.
      *
      * NOTE: Embedded in the function is verification that allows for token withdrawal
      * only if the token balance is greater than the token balance requested to
      * withdrawals on all `safeContract` smart contracts.
      */
     function withdrawLostTokens(address token) external onlyOwner returns (bool) {
-        uint256 _tempBalance1 = IERC20(address(token)).balanceOf(address(this));
+        uint256 _tempBalance = IERC20(address(token)).balanceOf(address(this));
 
-        if (_tempBalance1 > _deposits[token]) {
-            SafeERC20.safeTransfer(IERC20(address(token)), msg.sender, SafeMath.sub(_tempBalance1, _deposits[token]));
+        if (_tokens[token].deposited == 0 && _tempBalance > 0) {
+            SafeERC20.safeTransfer(IERC20(address(token)), msg.sender, _tempBalance);
         }
         return true;
     }

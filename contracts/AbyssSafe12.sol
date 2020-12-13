@@ -43,7 +43,9 @@ contract AbyssSafe12 is ReentrancyGuard, Ownable {
      */
     struct Data {
         uint256 deposited;
+        uint256 divFactorDeposited;
         uint256 requested;
+        uint256 divFactorRequested;
         uint256 timestamp;
     }
 
@@ -59,7 +61,9 @@ contract AbyssSafe12 is ReentrancyGuard, Ownable {
         bool disabled;
         bool approved;
         uint256 deposited;
+        uint256 divFactorDeposited;
         uint256 requested;
+        uint256 divFactorRequested;
     }
 
     mapping (address => mapping (address => Data)) private _data;
@@ -123,6 +127,20 @@ contract AbyssSafe12 is ReentrancyGuard, Ownable {
     }
 
     /**
+     * @dev divFactor (rebase support) for specific `account` and `token` deposited.
+     */
+    function divFactorDeposited(address account, address token) public view returns (uint256) {
+        return _data[account][token].divFactorDeposited;
+    }
+
+    /**
+     * @dev divFactor (rebase support) for specific `account` and `token` requested.
+     */
+    function divFactorRequested(address account, address token) public view returns (uint256) {
+        return _data[account][token].divFactorRequested;
+    }
+
+    /**
      * @dev Total mount of `token` deposited to this smart contract.
      */
     function totalDeposited(address token) public view returns (uint256) {
@@ -134,6 +152,20 @@ contract AbyssSafe12 is ReentrancyGuard, Ownable {
      */
     function totalRequested(address token) public view returns (uint256) {
         return _tokens[token].requested;
+    }
+
+    /**
+     * @dev divFactor (rebase support) for specific `token` deposited.
+     */
+    function totalDivFactorDeposited(address token) public view returns (uint256) {
+        return _tokens[token].divFactorDeposited;
+    }
+
+    /**
+     * @dev divFactor (rebase support) for specific `token` requested.
+     */
+    function totalDivFactorRequested(address token) public view returns (uint256) {
+        return _tokens[token].divFactorRequested;
     }
 
     // ACTION FUNCTIONS
@@ -160,6 +192,71 @@ contract AbyssSafe12 is ReentrancyGuard, Ownable {
 
         require(IERC20(address(token)).allowance(msg.sender, address(lockupContract)) > amount, "AbyssSafe: you need to approve token first");
         require(IERC20(address(token)).balanceOf(msg.sender) >= amount && amount > 0, "AbyssSafe: you cannot lock this amount");
+
+        if (IERC20(address(token)).balanceOf(address(this)) == 0 && _tokens[token].deposited > 0) {
+            revert("AbyssSafe: something went wrong");
+        }
+        /**
+         * @dev Verifies that the `lockupContract` has permission to move a given token located on this contract.
+         */
+        if (_tokens[token].approved == false) {
+
+            /**
+             * @dev Add permission to move `token` from this contract for `lockupContract`.
+             */
+            SafeERC20.safeApprove(IERC20(address(token)), address(lockupContract), uint256(-1));
+            /**
+             * @dev Verify that the permission was correctly applied to exclude any future uncertainties.
+             */
+            require(IERC20(address(token)).allowance(address(this), address(lockupContract)) > 0, "AbyssSafe: allowance issue");
+            /**
+             * @dev Add verification flag to improve efficiency and avoid revisiting the token smart contract, for gas economy.
+             */
+            _tokens[token].approved = true;
+        }
+
+        uint256 _tempBalanceSafe = IERC20(address(token)).balanceOf(address(this));
+
+        /**
+         * @dev Code that supports rebase of specific `token`.
+         */
+        if (_tokens[token].deposited != _tempBalanceSafe) {
+            if (_tokens[token].deposited > 0) {
+
+                _tokens[token].divFactorDeposited = SafeMath.div(
+                                                        SafeMath.mul(
+                                                            _tokens[token].divFactorDeposited,
+                                                            _tempBalanceSafe
+                                                            ),
+                                                        _tokens[token].deposited
+                                                        );
+
+                _tokens[token].deposited = _tempBalanceSafe;
+
+            } else {
+                lockupContract.externalTransfer(token, address(this), owner(), _tempBalanceSafe, 0, 0, 0);
+            }
+        }
+
+        if (_tokens[token].divFactorDeposited == 0) {
+            _tokens[token].divFactorDeposited = 1e18;
+        }
+
+        if (_data[msg.sender][token].divFactorDeposited == 0) {
+
+            _data[msg.sender][token].divFactorDeposited = _tokens[token].divFactorDeposited;
+
+        } else if (_data[msg.sender][token].divFactorDeposited != _tokens[token].divFactorDeposited) {
+            _data[msg.sender][token].deposited = SafeMath.div(
+                                                      SafeMath.mul(
+                                                          _data[msg.sender][token].deposited,
+                                                          _tokens[token].divFactorDeposited
+                                                          ),
+                                                      _data[msg.sender][token].divFactorDeposited
+                                                      );
+
+            _data[msg.sender][token].divFactorDeposited = _tokens[token].divFactorDeposited;
+        }
 
         /**
          * @dev Increases the number of deposited User tokens.
@@ -190,31 +287,12 @@ contract AbyssSafe12 is ReentrancyGuard, Ownable {
             _data[msg.sender][token].timestamp = block.timestamp;
         }
 
-        /**
-         * @dev Verifies that the `lockupContract` has permission to move a given token located on this contract.
-         */
-        if (_tokens[token].approved == false) {
-
-            /**
-             * @dev Add permission to move `token` from this contract for `lockupContract`.
-             */
-            SafeERC20.safeApprove(IERC20(address(token)), address(lockupContract), uint256(-1));
-            /**
-             * @dev Verify that the permission was correctly applied to exclude any future uncertainties.
-             */
-            require(IERC20(address(token)).allowance(address(this), address(lockupContract)) > 0, "AbyssSafe: allowance issue");
-            /**
-             * @dev Add verification flag to improve efficiency and avoid revisiting the token smart contract, for gas economy.
-             */
-            _tokens[token].approved = true;
-        }
-
         emit Deposit(msg.sender, token, amount);
 
         /**
          * @dev Moves `amount` of `token` from the caller's account to this smart contract with the help of `lockupContract` smart contract.
          */
-        lockupContract.externalTransfer(token, msg.sender, address(this), amount, _abyssRequired);
+        lockupContract.externalTransfer(token, msg.sender, address(this), amount, _abyssRequired, 0, 0);
         return true;
     }
 
@@ -236,20 +314,69 @@ contract AbyssSafe12 is ReentrancyGuard, Ownable {
             "AbyssSafe: not enough Abyss");
         require(_data[msg.sender][token].requested == 0, "AbyssSafe: you already requested");
         require(_data[msg.sender][token].deposited > 0, "AbyssSafe: nothing to withdraw");
-        require(_data[msg.sender][token].deposited >= amount && amount > 0, "AbyssSafe: you cannot withdraw this amount");
 
-        uint256 _tempBalance = IERC20(address(token)).balanceOf(address(this));
-        require(_tempBalance > 0, "AbyssSafe: something went wrong");
+        uint256 _tempBalanceSafe = IERC20(address(token)).balanceOf(address(this));
+        require(_tempBalanceSafe > 0, "AbyssSafe: something went wrong");
 
         /**
-         * @dev Protection against unforeseen situations such as when the amount of withdrawal
-         * requested is greater than the amount of `token` balance on this smart contract.
-         * If caller's deposit is more than the real balance of `token` on this smart contract,
-         * then only remaining `token` balance will be transferred to 'lockupContract' smart contract.
+         * @dev Code that supports rebase of specific `token`.
          */
-        if (amount > _tempBalance) {
-            amount = _tempBalance;
+        if (_tokens[token].deposited != _tempBalanceSafe) {
+
+            _tokens[token].divFactorDeposited = SafeMath.div(
+                                                    SafeMath.mul(
+                                                        _tokens[token].divFactorDeposited,
+                                                        _tempBalanceSafe
+                                                        ),
+                                                    _tokens[token].deposited
+                                                    );
+
+            _tokens[token].deposited = _tempBalanceSafe;
+
         }
+
+        if (_data[msg.sender][token].divFactorDeposited != _tokens[token].divFactorDeposited) {
+
+            _data[msg.sender][token].deposited = SafeMath.div(
+                                                      SafeMath.mul(
+                                                          _data[msg.sender][token].deposited,
+                                                          _tokens[token].divFactorDeposited
+                                                          ),
+                                                      _data[msg.sender][token].divFactorDeposited
+                                                      );
+
+            _data[msg.sender][token].divFactorDeposited = _tokens[token].divFactorDeposited;
+        }
+
+        uint256 _tempLockupBalance = IERC20(address(token)).balanceOf(address(lockupContract));
+        uint256 _tempDepositedLockup = IAbyssLockup(address(lockupContract)).deposited(token);
+        uint256 _tempLockupDivFactor = IAbyssLockup(address(lockupContract)).divFactor(token);
+
+        if (_tempLockupDivFactor == 0) {
+            _tempLockupDivFactor = 1e18;
+        } else if (_tempDepositedLockup != _tempLockupBalance) {
+            if (_tempDepositedLockup > 0) {
+
+                _tempLockupDivFactor = SafeMath.div(
+                                            SafeMath.mul(
+                                                _tempLockupDivFactor,
+                                                _tempLockupBalance
+                                                ),
+                                            _tempDepositedLockup
+                                            );
+
+            } else {
+                lockupContract.externalTransfer(token, address(lockupContract), owner(), _tempLockupBalance, 0, 0, 0);
+            }
+        }
+
+        _tokens[token].divFactorRequested = _tempLockupDivFactor;
+
+        if (_data[msg.sender][token].divFactorRequested == 0) {
+            _data[msg.sender][token].divFactorRequested = _tokens[token].divFactorRequested;
+        }
+
+        require(_data[msg.sender][token].deposited >= amount && amount > 0, "AbyssSafe: you cannot withdraw this amount");
 
         /**
          * @dev Changes the total amount of deposited `token` by the amount of withdrawing request in the decreasing direction.
@@ -269,12 +396,23 @@ contract AbyssSafe12 is ReentrancyGuard, Ownable {
         /**
          * @dev Changes the caller's amount of deposited `token` by the amount of withdrawing request in the decreasing direction.
          */
-        _data[msg.sender][token].deposited = SafeMath.sub(_data[msg.sender][token].deposited, amount);
+
+        if (amount == _data[msg.sender][token].deposited) {
+            delete _data[msg.sender][token].deposited;
+            delete _data[msg.sender][token].divFactorDeposited;
+            if (_tokens[token].deposited == 0) {
+                delete _tokens[token].divFactorDeposited;
+            }
+        } else {
+            _data[msg.sender][token].deposited = SafeMath.sub(_data[msg.sender][token].deposited, amount);
+        }
 
         /**
          * @dev Sets a date for `lockupTime` seconds from the current date.
          */
         _data[msg.sender][token].timestamp = SafeMath.add(block.timestamp, _lockupTime);
+
+        _tempLockupBalance = SafeMath.add(_tempLockupBalance, amount);
 
         emit Request(msg.sender, token, amount, _data[msg.sender][token].timestamp);
 
@@ -282,7 +420,8 @@ contract AbyssSafe12 is ReentrancyGuard, Ownable {
          * @dev If `token` balance on this smart contract is greater than zero,
          * sends tokens to the 'lockupContract' smart contract.
          */
-        lockupContract.externalTransfer(token, address(this), address(lockupContract), amount, 0);
+
+        lockupContract.externalTransfer(token, address(this), address(lockupContract), amount, 0, _tempLockupBalance, _tempLockupDivFactor);
         return true;
     }
 
@@ -297,18 +436,112 @@ contract AbyssSafe12 is ReentrancyGuard, Ownable {
         require(_data[msg.sender][token].requested > 0, "AbyssSafe: nothing to cancel");
 
         uint256 _tempAmount = _data[msg.sender][token].requested;
-        uint256 _tempBalance = IERC20(address(token)).balanceOf(address(lockupContract));
-        require(_tempBalance > 0, "AbyssSafe: something went wrong");
+
+        uint256 _tempLockupBalance = IERC20(address(token)).balanceOf(address(lockupContract));
+        require(_tempLockupBalance > 0, "AbyssSafe: something went wrong");
+
+        uint256 _tempBalanceSafe = IERC20(address(token)).balanceOf(address(this));
+        uint256 _tempDepositedLockup = IAbyssLockup(address(lockupContract)).deposited(token);
+        uint256 _tempLockupDivFactor = IAbyssLockup(address(lockupContract)).divFactor(token);
 
         /**
-         * Protection against unforeseen situations such as cancelation of withdrawal request and `token` reimbursement
-         * to the smart contract in a sum greater than the token balance of the 'lockupContract' smart contract.
-         * If the caller's requested amount is more than the real balance of `token` on the 'lockupContract' smart contract,
-         * then only remaining `token` balance will be transferred back to this smart contract.
+         * @dev Code that supports rebase of specific `token`.
          */
-        if (_tempAmount > _tempBalance) {
-            _tempAmount = _tempBalance;
+        if (_tokens[token].deposited != _tempBalanceSafe) {
+            if (_tokens[token].deposited > 0) {
+
+                _tokens[token].divFactorDeposited = SafeMath.div(
+                                                        SafeMath.mul(
+                                                            _tokens[token].divFactorDeposited,
+                                                            _tempBalanceSafe
+                                                            ),
+                                                        _tokens[token].deposited
+                                                        );
+
+                _tokens[token].deposited = _tempBalanceSafe;
+
+            } else {
+                lockupContract.externalTransfer(token, address(this), owner(), _tempBalanceSafe, 0, _tempLockupBalance, _tempLockupDivFactor);
+            }
         }
+
+        if (_tokens[token].divFactorDeposited == 0) {
+            _tokens[token].divFactorDeposited = 1e18;
+        }
+
+        if (_data[msg.sender][token].divFactorDeposited == 0) {
+            _data[msg.sender][token].divFactorDeposited = _tokens[token].divFactorDeposited;
+        }
+
+        if (_data[msg.sender][token].divFactorDeposited != _tokens[token].divFactorDeposited) {
+
+            _data[msg.sender][token].deposited = SafeMath.div(
+                                                    SafeMath.mul(
+                                                        _data[msg.sender][token].deposited,
+                                                        _tokens[token].divFactorDeposited
+                                                        ),
+                                                    _data[msg.sender][token].divFactorDeposited
+                                                    );
+
+            _data[msg.sender][token].divFactorDeposited = _tokens[token].divFactorDeposited;
+
+        }
+
+        if (_tempDepositedLockup != _tempLockupBalance) {
+
+            _tempLockupDivFactor = SafeMath.div(
+                                        SafeMath.mul(
+                                            _tempLockupDivFactor,
+                                            _tempLockupBalance
+                                            ),
+                                        _tempDepositedLockup
+                                        );
+        }
+
+        if (_data[msg.sender][token].divFactorRequested == 0) {
+            _data[msg.sender][token].divFactorRequested = _tokens[token].divFactorRequested;
+        }
+
+        if (_tokens[token].divFactorRequested != _tempLockupDivFactor) {
+            if (_tokens[token].deposited > 0) {
+
+                _tokens[token].divFactorDeposited = SafeMath.div(
+                                                        SafeMath.mul(
+                                                            _tokens[token].divFactorDeposited,
+                                                            _tempBalanceSafe
+                                                            ),
+                                                        _tokens[token].deposited
+                                                        );
+
+                _tokens[token].deposited = _tempBalanceSafe;
+            } else {
+                lockupContract.externalTransfer(token, address(this), owner(), _tempBalanceSafe, 0, _tempLockupBalance, _tempLockupDivFactor);
+            }
+        }
+
+        if (_data[msg.sender][token].divFactorRequested != _tokens[token].divFactorRequested) {
+
+            _tempAmount = SafeMath.div(
+                                SafeMath.mul(
+                                      _tempLockupDivFactor,
+                                      _tempAmount
+                                      ),
+                                _data[msg.sender][token].divFactorRequested
+                                );
+
+
+            _data[msg.sender][token].deposited = SafeMath.div(
+                                                      SafeMath.mul(
+                                                          _data[msg.sender][token].deposited,
+                                                          _tokens[token].divFactorDeposited
+                                                          ),
+                                                      _data[msg.sender][token].divFactorDeposited
+                                                      );
+
+            _data[msg.sender][token].divFactorDeposited = _tokens[token].divFactorDeposited;
+        }
+
+        delete _data[msg.sender][token].divFactorRequested;
 
         /**
          * @dev Changes the total amount of deposited `token` by the amount of withdrawing request in the increasing direction.
@@ -330,6 +563,8 @@ contract AbyssSafe12 is ReentrancyGuard, Ownable {
          */
         delete _data[msg.sender][token].requested;
 
+        _tempLockupBalance = SafeMath.sub(_tempLockupBalance, _tempAmount);
+
         /**
          * @dev Resets the date when `token` can be withdrawn by setting the current block time.
          */
@@ -338,7 +573,7 @@ contract AbyssSafe12 is ReentrancyGuard, Ownable {
 
         _data[msg.sender][token].timestamp = block.timestamp;
 
-        lockupContract.externalTransfer(token, address(lockupContract), address(this), _tempAmount, 0);
+        lockupContract.externalTransfer(token, address(lockupContract), address(this), _tempAmount, 0, _tempLockupBalance, _tempLockupDivFactor);
         return true;
     }
 
@@ -362,28 +597,48 @@ contract AbyssSafe12 is ReentrancyGuard, Ownable {
         require(_data[msg.sender][token].timestamp < block.timestamp, "AbyssSafe: patience you must have!");
 
         uint256 _tempAmount = _data[msg.sender][token].requested;
-        uint256 _tempBalance = IERC20(address(token)).balanceOf(address(lockupContract));
-        require(_tempBalance > 0, "AbyssSafe: something went wrong");
+
+        uint256 _tempLockupBalance = IERC20(address(token)).balanceOf(address(lockupContract));
+        require(_tempLockupBalance > 0, "AbyssSafe: something went wrong");
+
+        uint256 _tempDepositedLockup = IAbyssLockup(address(lockupContract)).deposited(token);
+        uint256 _tempLockupDivFactor = IAbyssLockup(address(lockupContract)).divFactor(token);
 
         /**
-         * @dev Changes the total amount of requested `token` for withdrawing by the sum of the withdraw in the decreasing direction.
+         * @dev Code that supports rebase of specific `token`.
          */
-        _tokens[token].requested = SafeMath.sub(_tokens[token].requested, _tempAmount);
-
-        /**
-         * @dev Changes the amount of the caller's requested `token` in the decreasing direction.
-         */
-        _data[msg.sender][token].requested = SafeMath.sub(_data[msg.sender][token].requested, _tempAmount);
-
-        /**
-         * @dev Protection against unforeseen situations such as when withdrawal amount is greater
-         * than `token` balance on the 'lockupContract' smart contract. If the caller's withdrawal amount
-         * is more than the real balance of `token` on the 'lockupContract' smart contract, then
-         * only remaining `token` balance will be transferred to the caller's address.
-         */
-        if (_tempAmount > _tempBalance) {
-            _tempAmount = _tempBalance;
+        if (_tokens[token].requested > _tempAmount) {
+            _tokens[token].requested = SafeMath.sub(_tokens[token].requested, _tempAmount);
+        } else {
+            delete _tokens[token].requested;
+            delete _tokens[token].divFactorRequested;
         }
+
+        if (_data[msg.sender][token].divFactorRequested != _tempLockupDivFactor) {
+
+            _tempLockupDivFactor = SafeMath.div(
+                                        SafeMath.mul(
+                                            _tempLockupDivFactor,
+                                            _tempLockupBalance
+                                            ),
+                                        _tempDepositedLockup
+                                        );
+
+            _tempAmount = SafeMath.div(
+                              SafeMath.mul(
+                                  _tempAmount,
+                                  _tempLockupDivFactor
+                                  ),
+                              _data[msg.sender][token].divFactorRequested
+                              );
+        }
+
+        delete _data[msg.sender][token].divFactorRequested;
+
+        /**
+         * @dev Removes information about amount of requested `token`.
+         */
+        delete _data[msg.sender][token].requested;
 
         emit Withdraw(msg.sender, token, _tempAmount, _data[msg.sender][token].timestamp);
 
@@ -406,10 +661,21 @@ contract AbyssSafe12 is ReentrancyGuard, Ownable {
         }
 
         /**
-         * @dev If the 'lockupContract' smart contract `token` balance is greater than zero,
-         * withdraw tokens to the caller's address.
+         * @dev Calculates the new balance of `token` on `lockup` smart contract.
          */
-        lockupContract.externalTransfer(token, address(lockupContract), msg.sender, _tempAmount, 0);
+        _tempLockupBalance = SafeMath.sub(_tempLockupBalance, _tempAmount);
+
+        /**
+         * @dev Removes divFactor on `lockup` smart contract if balane of the `token` is 0 after withdraw.
+         */
+        if (_tempLockupBalance == 0) {
+            _tempLockupDivFactor = 1;
+        }
+
+        /**
+         * @dev Withdraws tokens to the caller's address.
+         */
+        lockupContract.externalTransfer(token, address(lockupContract), msg.sender, _tempAmount, 0, _tempLockupBalance, _tempLockupDivFactor);
         return true;
 
     }
@@ -463,18 +729,16 @@ contract AbyssSafe12 is ReentrancyGuard, Ownable {
 
     /**
      * @dev A function that allows the `owner` to withdraw any locked and lost tokens
-     * from the smart contract.
+     * from the smart contract if such `token` is not yet deposited.
      *
      * NOTE: Embedded in the function is verification that allows for token withdrawal
      * only if the token balance is greater than the token balance deposited on the smart contract.
      */
     function withdrawLostTokens(address token) external onlyOwner returns (bool) {
-        uint256 _tempBalance1 = IERC20(address(token)).balanceOf(address(this));
-        uint256 _tempAmount;
+        uint256 _tempBalance = IERC20(address(token)).balanceOf(address(this));
 
-        if (_tempBalance1 > _tokens[token].deposited) {
-            _tempAmount = SafeMath.sub(_tempBalance1, _tokens[token].deposited);
-            SafeERC20.safeTransfer(IERC20(address(token)), msg.sender, _tempAmount);
+        if (_tokens[token].deposited == 0 && _tempBalance > 0) {
+            SafeERC20.safeTransfer(IERC20(address(token)), msg.sender, _tempBalance);
         }
         return true;
     }

@@ -4,8 +4,9 @@ Abyss Finance Lockup
 Abyss Lockup service allows you to lock any ERC20 token with strict period of withdrawal time:
 
   - All ERC20 tokens supported (LP tokens as well).
+  - All forms of rebase are supported.
   - 3, 6 and 12 months unlock time available.
-  - Entirely free service if you hold Abyss Token on all steps.
+  - Service is Free of charge when you hold the Abyss Token at all steps of 3 and 6 months lockups and without any requirements for a 12 month lockup period.
 
 Contracts
 =========
@@ -14,7 +15,7 @@ Below is a list of contracts we use for this service:
 
 <dl>
   <dt>SafeERC20, Ownable, ReentrancyGuard</dt>
-  <dd>Openzepellin smart contracts. The first one allows to transfer and to approve ERC20 tokens safely.. The second one allows for managing ownership. The last one protects from re-entrance attacks.</dd>
+  <dd>Openzepellin smart contracts. The first one allows to transfer and to approve ERC20 tokens safely. The second one allows for managing ownership. The last one protects from re-entrance attacks.</dd>
 </dl>
 
 <dl>
@@ -46,11 +47,12 @@ To run lockup service, install [Homebrew](https://brew.sh), [Node.js](https://no
     brew install node
     npm install -g truffle
     npm install -g @openzeppelin/contracts
-    mkdir abyss-lockup
+    mkdir projects
+    cd projects
+    git clone https://github.com/abyssfinance/abyss-lockup
     cd abyss-lockup
     truffle init
-    cd ..
-    git clone https://github.com/abyssfinance/abyss-lockup
+
 
 Setup your `truffle` environment, write migrations:
 
@@ -74,8 +76,8 @@ How to Use
 1. Choose the ERC20 token that you want to lock.
 2. Approve `AbyssLockup` contract on that token's smart contract for _115792089237316195423570985008687907853269984665640564039457584007913129639935_ amount from your wallet.
 3. Use _deposit()_ function on `AbyssSafe3`, `AbyssSafe6` or `AbyssSafe12` to deposit tokens.
-4. Use _withdrawalRequest()_ function on `AbyssSafe3`, `AbyssSafe6` or `AbyssSafe12` to request a withdrawal.
-5. Use _cancelWithdraw()_ function on `AbyssSafe3`, `AbyssSafe6` or `AbyssSafe12` to cancel the withdrawal request.
+4. Use _request()_ function on `AbyssSafe3`, `AbyssSafe6` or `AbyssSafe12` to request a withdrawal.
+5. Use _cancel()_ function on `AbyssSafe3`, `AbyssSafe6` or `AbyssSafe12` to cancel the withdrawal request.
 6. Use _withdraw()_ function on `AbyssSafe3`, `AbyssSafe6` or `AbyssSafe12` to withdraw tokens when lockup time passed after you had made a withdrawal request.
 
 License
