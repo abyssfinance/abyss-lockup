@@ -22,6 +22,7 @@ contract AbyssLockup is Ownable {
     using SafeERC20 for IERC20;
     using SafeMath for uint256;
 
+    address public safeContract1;
     address public safeContract3;
     address public safeContract6;
     address public safeContract12;
@@ -108,8 +109,9 @@ contract AbyssLockup is Ownable {
      *
      * All three of these values are immutable: they can only be set once.
      */
-    function initialize(address safe3, address safe6, address safe12) external onlyOwner returns (bool) {
-        require(address(safeContract3) == address(0), "AbyssLockup: already initialized");
+    function initialize(address safe1, address safe3, address safe6, address safe12) external onlyOwner returns (bool) {
+        require(address(safeContract1) == address(0), "AbyssLockup: already initialized");
+        safeContract1 = safe1;
         safeContract3 = safe3;
         safeContract6 = safe6;
         safeContract12 = safe12;
@@ -137,7 +139,7 @@ contract AbyssLockup is Ownable {
      * @dev Modifier that allows usage only for `safeContract` smart contracts
     */
     modifier onlyContract(address account)  {
-        require(account == address(safeContract3) || account == address(safeContract6) || account == address(safeContract12), "AbyssLockup: restricted area");
+        require(account == address(safeContract1) || account == address(safeContract3) || account == address(safeContract6) || account == address(safeContract12), "AbyssLockup: restricted area");
         _;
     }
 }

@@ -20,7 +20,7 @@ import "../contracts/interfaces/IAbyssLockup.sol";
  * Abyss Finance's AbyssSafe Contract
  * The main smart contract that is responsible for deposits and withdrawal of tokens.
  */
-contract AbyssSafe3 is ReentrancyGuard, Ownable {
+contract AbyssSafe1 is ReentrancyGuard, Ownable {
     using SafeERC20 for IERC20;
     using SafeMath for uint256;
 
@@ -637,7 +637,7 @@ contract AbyssSafe3 is ReentrancyGuard, Ownable {
         emit Withdraw(msg.sender, token, _tempAmount, _data[msg.sender][token].timestamp);
 
         /**
-         * @dev If there are no deposited tokens left, reset the unblocking time to zero.
+         * @dev Reset the unblocking time to zero.
          */
         delete _data[msg.sender][token].timestamp;
 

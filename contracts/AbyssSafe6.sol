@@ -278,15 +278,6 @@ contract AbyssSafe6 is ReentrancyGuard, Ownable {
             _rates[msg.sender] = _abyssRequired;
         }
 
-        /**
-         * @dev If this token has a timestamp earlier than the current block time, records the
-         * current block time. Verification is done in order to prevent overwriting of `timestamp` for
-         * the callers with active `token` withdrawal request.
-         */
-        if (_data[msg.sender][token].timestamp < block.timestamp) {
-            _data[msg.sender][token].timestamp = block.timestamp;
-        }
-
         emit Deposit(msg.sender, token, amount);
 
         /**
@@ -571,7 +562,10 @@ contract AbyssSafe6 is ReentrancyGuard, Ownable {
 
         emit Cancel(msg.sender, token, _tempAmount, _data[msg.sender][token].timestamp);
 
-        _data[msg.sender][token].timestamp = block.timestamp;
+        /**
+         * @dev Reset the unblocking time to zero.
+         */
+        delete _data[msg.sender][token].timestamp;
 
         lockupContract.externalTransfer(token, address(lockupContract), address(this), _tempAmount, 0, _tempLockupBalance, _tempLockupDivFactor);
         return true;
@@ -643,22 +637,9 @@ contract AbyssSafe6 is ReentrancyGuard, Ownable {
         emit Withdraw(msg.sender, token, _tempAmount, _data[msg.sender][token].timestamp);
 
         /**
-         * @dev Verifies that the caller has not deposited any `token` after withdrawal request was made.
+         * @dev Reset the unblocking time to zero.
          */
-        if (_data[msg.sender][token].deposited == 0) {
-
-            /**
-             * @dev If there are no deposited tokens left, reset the unblocking time to zero.
-             */
-            delete _data[msg.sender][token].timestamp;
-
-        } else {
-
-            /**
-             * @dev If there are deposited tokens left, set the time of the current block.
-             */
-            _data[msg.sender][token].timestamp = block.timestamp;
-        }
+        delete _data[msg.sender][token].timestamp;
 
         /**
          * @dev Calculates the new balance of `token` on `lockup` smart contract.

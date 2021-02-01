@@ -5,8 +5,8 @@ Abyss Lockup service allows you to lock any ERC20 token with strict period of wi
 
   - All ERC20 tokens supported (LP tokens as well).
   - All forms of rebase are supported.
-  - 3, 6 and 12 months unlock time available.
-  - Service is Free of charge when you hold the Abyss Token at all steps of 3 and 6 months lockups and without any requirements for a 12 month lockup period.
+  - 1, 3, 6 and 12 months unlock time available.
+  - Service is Free of charge when you hold the Abyss Token at all steps of 1, 3 and 6 months unlock time and without any requirements for a 12 month unlock time.
 
 Contracts
 =========
@@ -21,6 +21,11 @@ Below is a list of contracts we use for this service:
 <dl>
   <dt>AbyssLockup</dt>
   <dd>A smart contract that stores tokens requested for withdrawal, as well as through which tokens are transferred from/to user and between contracts.</dd>
+</dl>
+
+<dl>
+  <dt>AbyssSafe1</dt>
+  <dd>The main smart contract responsible for deposits and withdrawal of tokens. 2592000 seconds (1 month) lockup delay setting should be applied on deployment.</dd>
 </dl>
 
 <dl>
@@ -65,20 +70,21 @@ Deployment (Mainnet)
 Smart contracts should be deployed in such order:
 
 1. `AbyssLockup.sol` _(100)_
-2. `AbyssSafe3.sol`_(0x0e8d6b471e332f140e7d9dbb99e5e3822f728da6, AbyssLockup_address, 7776000, 20000000000000000000000)_
-3. `AbyssSafe6.sol`_(0x0e8d6b471e332f140e7d9dbb99e5e3822f728da6, AbyssLockup_address, 15552000, 10000000000000000000000)_
+2. `AbyssSafe1.sol`_(0x0e8d6b471e332f140e7d9dbb99e5e3822f728da6, AbyssLockup_address, 2592000, 100000000000000000000000)_
+2. `AbyssSafe3.sol`_(0x0e8d6b471e332f140e7d9dbb99e5e3822f728da6, AbyssLockup_address, 7776000, 10000000000000000000000)_
+3. `AbyssSafe6.sol`_(0x0e8d6b471e332f140e7d9dbb99e5e3822f728da6, AbyssLockup_address, 15552000, 1000000000000000000000)_
 4. `AbyssSafe12.sol`_(0x0e8d6b471e332f140e7d9dbb99e5e3822f728da6, AbyssLockup_address, 31536000, 0)_
-5. Call _initialize(AbyssSafe3_address, AbyssSafe6_address, AbyssSafe12_address)_ function from the `owner` on `AbyssLockup` contract.
+5. Call _initialize(AbyssSafe1_address, AbyssSafe3_address, AbyssSafe6_address, AbyssSafe12_address)_ function from the `owner` on `AbyssLockup` contract.
 
 How to Use
 ------------
 
 1. Choose the ERC20 token that you want to lock.
 2. Approve `AbyssLockup` contract on that token's smart contract for _115792089237316195423570985008687907853269984665640564039457584007913129639935_ amount from your wallet.
-3. Use _deposit()_ function on `AbyssSafe3`, `AbyssSafe6` or `AbyssSafe12` to deposit tokens.
-4. Use _request()_ function on `AbyssSafe3`, `AbyssSafe6` or `AbyssSafe12` to request a withdrawal.
-5. Use _cancel()_ function on `AbyssSafe3`, `AbyssSafe6` or `AbyssSafe12` to cancel the withdrawal request.
-6. Use _withdraw()_ function on `AbyssSafe3`, `AbyssSafe6` or `AbyssSafe12` to withdraw tokens when lockup time passed after you had made a withdrawal request.
+3. Use _deposit()_ function on `AbyssSafe1`, `AbyssSafe3`, `AbyssSafe6` or `AbyssSafe12` to deposit tokens.
+4. Use _request()_ function on `AbyssSafe1`, `AbyssSafe3`, `AbyssSafe6` or `AbyssSafe12` to request a withdrawal.
+5. Use _cancel()_ function on `AbyssSafe1`, `AbyssSafe3`, `AbyssSafe6` or `AbyssSafe12` to cancel the withdrawal request.
+6. Use _withdraw()_ function on `AbyssSafe1`, `AbyssSafe3`, `AbyssSafe6` or `AbyssSafe12` to withdraw tokens when lockup time passed after you had made a withdrawal request.
 
 License
 =========
