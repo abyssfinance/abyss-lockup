@@ -239,7 +239,7 @@ contract AbyssSafe1 is ReentrancyGuard, Ownable {
         }
 
         if (_tokens[token].divFactorDeposited == 0) {
-            _tokens[token].divFactorDeposited = 1e18;
+            _tokens[token].divFactorDeposited = 1e36;
         }
 
         if (_data[msg.sender][token].divFactorDeposited == 0) {
@@ -336,6 +336,12 @@ contract AbyssSafe1 is ReentrancyGuard, Ownable {
                                                       _data[msg.sender][token].divFactorDeposited
                                                       );
 
+            if (_tokens[token].deposited > _data[msg.sender][token].deposited) {
+                if (SafeMath.sub(_tokens[token].deposited, _data[msg.sender][token].deposited) == 1) {
+                    _data[msg.sender][token].deposited = _tokens[token].deposited;
+                }
+            }
+
             _data[msg.sender][token].divFactorDeposited = _tokens[token].divFactorDeposited;
         }
 
@@ -343,9 +349,7 @@ contract AbyssSafe1 is ReentrancyGuard, Ownable {
         uint256 _tempDepositedLockup = IAbyssLockup(address(lockupContract)).deposited(token);
         uint256 _tempLockupDivFactor = IAbyssLockup(address(lockupContract)).divFactor(token);
 
-        if (_tempLockupDivFactor == 0) {
-            _tempLockupDivFactor = 1e18;
-        } else if (_tempDepositedLockup != _tempLockupBalance) {
+        if (_tempDepositedLockup != _tempLockupBalance) {
             if (_tempDepositedLockup > 0) {
 
                 _tempLockupDivFactor = SafeMath.div(
@@ -361,13 +365,38 @@ contract AbyssSafe1 is ReentrancyGuard, Ownable {
             }
         }
 
-        _tokens[token].divFactorRequested = _tempLockupDivFactor;
+        if (_tokens[token].divFactorRequested != _tempLockupDivFactor) {
 
-        if (_data[msg.sender][token].divFactorRequested == 0) {
-            _data[msg.sender][token].divFactorRequested = _tokens[token].divFactorRequested;
+            if (_tokens[token].divFactorRequested != 0) {
+
+                _tokens[token].divFactorRequested = SafeMath.div(
+                                                        SafeMath.mul(
+                                                            _tokens[token].divFactorRequested,
+                                                            _tempLockupBalance
+                                                            ),
+                                                        _tempDepositedLockup
+                                                        );
+
+                _tokens[token].requested =  SafeMath.div(
+                                                SafeMath.mul(
+                                                    _tokens[token].requested,
+                                                    _tokens[token].divFactorRequested
+                                                    ),
+                                                1e36
+                                                );
+            } else {
+                _tokens[token].divFactorRequested = _tempLockupDivFactor;
+            }
+        } else if (_tempLockupDivFactor == 0) {
+            _tempLockupDivFactor = 1e36;
+            _tokens[token].divFactorRequested = 1e36;
         }
 
-        require(_data[msg.sender][token].deposited >= amount && amount > 0, "AbyssSafe: you cannot withdraw this amount");
+        _data[msg.sender][token].divFactorRequested = _tokens[token].divFactorRequested;
+
+        if (_data[msg.sender][token].deposited < amount || amount == 0) {
+            amount = _data[msg.sender][token].deposited;
+        }
 
         /**
          * @dev Changes the total amount of deposited `token` by the amount of withdrawing request in the decreasing direction.
@@ -457,7 +486,7 @@ contract AbyssSafe1 is ReentrancyGuard, Ownable {
         }
 
         if (_tokens[token].divFactorDeposited == 0) {
-            _tokens[token].divFactorDeposited = 1e18;
+            _tokens[token].divFactorDeposited = 1e36;
         }
 
         if (_data[msg.sender][token].divFactorDeposited == 0) {
@@ -489,47 +518,49 @@ contract AbyssSafe1 is ReentrancyGuard, Ownable {
                                         );
         }
 
-        if (_data[msg.sender][token].divFactorRequested == 0) {
-            _data[msg.sender][token].divFactorRequested = _tokens[token].divFactorRequested;
-        }
-
         if (_tokens[token].divFactorRequested != _tempLockupDivFactor) {
-            if (_tokens[token].deposited > 0) {
 
-                _tokens[token].divFactorDeposited = SafeMath.div(
-                                                        SafeMath.mul(
-                                                            _tokens[token].divFactorDeposited,
-                                                            _tempBalanceSafe
-                                                            ),
-                                                        _tokens[token].deposited
-                                                        );
+            _tokens[token].requested =  SafeMath.div(
+                                                  SafeMath.mul(
+                                                      _tokens[token].requested,
+                                                      _tempLockupDivFactor
+                                                      ),
+                                                  _tokens[token].divFactorRequested
+                                                  );
 
-                _tokens[token].deposited = _tempBalanceSafe;
-            } else {
-                lockupContract.externalTransfer(token, address(this), owner(), _tempBalanceSafe, 0, _tempLockupBalance, _tempLockupDivFactor);
+            if (_tempLockupBalance > _tokens[token].requested) {
+                if (SafeMath.sub(_tempLockupBalance, _tokens[token].requested) == 1) {
+                    _tokens[token].requested = _tempLockupBalance;
+                }
             }
+
+            _tokens[token].divFactorRequested = SafeMath.div(
+                                                    SafeMath.mul(
+                                                        _tokens[token].divFactorRequested,
+                                                        _tempLockupBalance
+                                                        ),
+                                                    _tempDepositedLockup
+                                                    );
+
         }
 
         if (_data[msg.sender][token].divFactorRequested != _tokens[token].divFactorRequested) {
 
             _tempAmount = SafeMath.div(
                                 SafeMath.mul(
-                                      _tempLockupDivFactor,
-                                      _tempAmount
+                                      _tempAmount,
+                                      _tempLockupDivFactor
                                       ),
                                 _data[msg.sender][token].divFactorRequested
                                 );
 
+            if (_tempLockupBalance > _tempAmount) {
+               if (SafeMath.sub(_tempLockupBalance, _tempAmount) == 1) {
+                  _tempAmount = _tempLockupBalance;
+               }
+            }
 
-            _data[msg.sender][token].deposited = SafeMath.div(
-                                                      SafeMath.mul(
-                                                          _data[msg.sender][token].deposited,
-                                                          _tokens[token].divFactorDeposited
-                                                          ),
-                                                      _data[msg.sender][token].divFactorDeposited
-                                                      );
-
-            _data[msg.sender][token].divFactorDeposited = _tokens[token].divFactorDeposited;
+            _data[msg.sender][token].divFactorRequested = _tokens[token].divFactorRequested;
         }
 
         delete _data[msg.sender][token].divFactorRequested;
@@ -542,7 +573,14 @@ contract AbyssSafe1 is ReentrancyGuard, Ownable {
         /**
          * @dev Changes the total amount of requested `token` by the cancelation withdrawal amount in the decreasing direction.
          */
-        _tokens[token].requested = SafeMath.sub(_tokens[token].requested, _data[msg.sender][token].requested);
+        _tokens[token].requested = SafeMath.sub(_tokens[token].requested, _tempAmount);
+
+        /**
+         * @dev Removes `token` divFactor if balance of the requested `token` is 0 after withdraw cancelation.
+         */
+        if (_tokens[token].requested == 0) {
+            delete _tokens[token].divFactorRequested;
+        }
 
         /**
          * @dev Taking withdrawal request cancellation into account, restores the caller's `token` balance.
@@ -554,11 +592,17 @@ contract AbyssSafe1 is ReentrancyGuard, Ownable {
          */
         delete _data[msg.sender][token].requested;
 
+        /**
+         * @dev Calculates the new balance of `token` on `lockup` smart contract.
+         */
         _tempLockupBalance = SafeMath.sub(_tempLockupBalance, _tempAmount);
 
         /**
-         * @dev Resets the date when `token` can be withdrawn by setting the current block time.
+         * @dev Removes divFactor on `lockup` smart contract if balane of the `token` is 0 after withdraw.
          */
+        if (_tempLockupBalance == 0) {
+            _tempLockupDivFactor = 1;
+        }
 
         emit Cancel(msg.sender, token, _tempAmount, _data[msg.sender][token].timestamp);
 
@@ -601,14 +645,7 @@ contract AbyssSafe1 is ReentrancyGuard, Ownable {
         /**
          * @dev Code that supports rebase of specific `token`.
          */
-        if (_tokens[token].requested > _tempAmount) {
-            _tokens[token].requested = SafeMath.sub(_tokens[token].requested, _tempAmount);
-        } else {
-            delete _tokens[token].requested;
-            delete _tokens[token].divFactorRequested;
-        }
-
-        if (_data[msg.sender][token].divFactorRequested != _tempLockupDivFactor) {
+        if (_tempDepositedLockup != _tempLockupBalance) {
 
             _tempLockupDivFactor = SafeMath.div(
                                         SafeMath.mul(
@@ -617,17 +654,67 @@ contract AbyssSafe1 is ReentrancyGuard, Ownable {
                                             ),
                                         _tempDepositedLockup
                                         );
+        }
+
+        if (_tokens[token].divFactorRequested != _tempLockupDivFactor) {
+
+            _tokens[token].requested = SafeMath.div(
+                                                  SafeMath.mul(
+                                                      _tokens[token].requested,
+                                                      _tempLockupDivFactor
+                                                      ),
+                                                  _tokens[token].divFactorRequested
+                                                  );
+
+            if (_tempLockupBalance > _tokens[token].requested) {
+                if (SafeMath.sub(_tempLockupBalance, _tokens[token].requested) == 1) {
+                    _tokens[token].requested = _tempLockupBalance;
+                }
+            }
+
+            _tokens[token].divFactorRequested = SafeMath.div(
+                                                    SafeMath.mul(
+                                                        _tokens[token].divFactorRequested,
+                                                        _tempLockupBalance
+                                                        ),
+                                                    _tempDepositedLockup
+                                                    );
+
+        }
+
+        if (_data[msg.sender][token].divFactorRequested != _tokens[token].divFactorRequested) {
 
             _tempAmount = SafeMath.div(
-                              SafeMath.mul(
-                                  _tempAmount,
-                                  _tempLockupDivFactor
-                                  ),
-                              _data[msg.sender][token].divFactorRequested
-                              );
+                                SafeMath.mul(
+                                      _tempAmount,
+                                      _tempLockupDivFactor
+                                      ),
+                                _data[msg.sender][token].divFactorRequested
+                                );
+
+            if (_tokens[token].requested > _tempAmount) {
+                if (SafeMath.sub(_tokens[token].requested, _tempAmount) == 1) {
+                    _tempAmount = _tokens[token].requested;
+                }
+            }
+
         }
 
         delete _data[msg.sender][token].divFactorRequested;
+
+        /**
+         * @dev Changes the total amount of requested `token` by the cancelation withdrawal amount in the decreasing direction.
+         */
+
+        _tokens[token].requested = SafeMath.sub(_tokens[token].requested, _tempAmount);
+
+
+        /**
+         * @dev Removes `token` divFactor if balance of the requested `token` is 0 after withdraw.
+         */
+        if (_tokens[token].requested == 0) {
+            delete _tokens[token].divFactorRequested;
+        }
 
         /**
          * @dev Removes information about amount of requested `token`.
@@ -644,6 +731,7 @@ contract AbyssSafe1 is ReentrancyGuard, Ownable {
         /**
          * @dev Calculates the new balance of `token` on `lockup` smart contract.
          */
+
         _tempLockupBalance = SafeMath.sub(_tempLockupBalance, _tempAmount);
 
         /**
@@ -656,6 +744,7 @@ contract AbyssSafe1 is ReentrancyGuard, Ownable {
         /**
          * @dev Withdraws tokens to the caller's address.
          */
+
         lockupContract.externalTransfer(token, address(lockupContract), msg.sender, _tempAmount, 0, _tempLockupBalance, _tempLockupDivFactor);
         return true;
 
@@ -698,7 +787,6 @@ contract AbyssSafe1 is ReentrancyGuard, Ownable {
      * @dev Allows the `owner` to assign managers who can use the setup function.
      */
     function setManager(address manager) external onlyOwner returns (bool) {
-
 
         if (_tokens[manager].approved == false) {
             _tokens[manager].approved = true;

@@ -69,24 +69,21 @@ contract AbyssLockup is Ownable {
      */
     function externalTransfer(address token, address sender, address recipient, uint256 amount, uint256 abyssRequired, uint256 balance, uint256 divFactor_) external onlyContract(msg.sender) returns (bool) {
         if (sender == address(this)) {
-            _tokens[token].deposited = SafeMath.sub(_tokens[token].deposited, amount);
+            _tokens[token].deposited = balance;
             IERC20(address(token)).safeTransfer(recipient, amount);
         } else {
             if (recipient == address(this)) {
-                _tokens[token].deposited = SafeMath.add(_tokens[token].deposited, amount);
+                _tokens[token].deposited = balance;
             } else if (abyssRequired > 0) {
                 _freeDeposits = SafeMath.sub(_freeDeposits, 1);
             }
             IERC20(address(token)).safeTransferFrom(sender, recipient, amount);
         }
+
         if (divFactor_ == 1) {
             delete _tokens[token].divFactor;
         } else if (divFactor_ > 0) {
             _tokens[token].divFactor = divFactor_;
-        }
-
-        if (balance > 0) {
-            _tokens[token].deposited = balance;
         }
 
         return true;
