@@ -229,17 +229,7 @@ contract AbyssSafeBase is ReentrancyGuard, Ownable {
          */
         if (_tokens[token].deposited != _tempBalanceSafe) {
             if (_tokens[token].deposited > 0) {
-
-                _tokens[token].divFactorDeposited = SafeMath.div(
-                                                        SafeMath.mul(
-                                                            _tokens[token].divFactorDeposited,
-                                                            _tempBalanceSafe
-                                                            ),
-                                                        _tokens[token].deposited
-                                                        );
-
-                _tokens[token].deposited = _tempBalanceSafe;
-
+                calcDivFactorDepositedTotal(token, _tempBalanceSafe);
             } else {
                 lockupContract.externalTransfer(token, address(this), owner(), _tempBalanceSafe, 0, 0, 0);
             }
@@ -250,19 +240,9 @@ contract AbyssSafeBase is ReentrancyGuard, Ownable {
         }
 
         if (_data[receiver][token].divFactorDeposited == 0) {
-
             _data[receiver][token].divFactorDeposited = _tokens[token].divFactorDeposited;
-
         } else if (_data[receiver][token].divFactorDeposited != _tokens[token].divFactorDeposited) {
-            _data[receiver][token].deposited = SafeMath.div(
-                                                      SafeMath.mul(
-                                                          _data[receiver][token].deposited,
-                                                          _tokens[token].divFactorDeposited
-                                                          ),
-                                                      _data[receiver][token].divFactorDeposited
-                                                      );
-
-            _data[receiver][token].divFactorDeposited = _tokens[token].divFactorDeposited;
+            calcDivFactorDeposited(receiver, token);
         }
 
         /**
@@ -320,36 +300,11 @@ contract AbyssSafeBase is ReentrancyGuard, Ownable {
          * @dev Code that supports rebase of specific `token`.
          */
         if (_tokens[token].deposited != _tempBalanceSafe) {
-
-            _tokens[token].divFactorDeposited = SafeMath.div(
-                                                    SafeMath.mul(
-                                                        _tokens[token].divFactorDeposited,
-                                                        _tempBalanceSafe
-                                                        ),
-                                                    _tokens[token].deposited
-                                                    );
-
-            _tokens[token].deposited = _tempBalanceSafe;
-
+                calcDivFactorDepositedTotal(token, _tempBalanceSafe);
         }
 
         if (_data[msg.sender][token].divFactorDeposited != _tokens[token].divFactorDeposited) {
-
-            _data[msg.sender][token].deposited = SafeMath.div(
-                                                      SafeMath.mul(
-                                                          _data[msg.sender][token].deposited,
-                                                          _tokens[token].divFactorDeposited
-                                                          ),
-                                                      _data[msg.sender][token].divFactorDeposited
-                                                      );
-
-            if (_tokens[token].deposited > _data[msg.sender][token].deposited) {
-                if (SafeMath.sub(_tokens[token].deposited, _data[msg.sender][token].deposited) == 1) {
-                    _data[msg.sender][token].deposited = _tokens[token].deposited;
-                }
-            }
-
-            _data[msg.sender][token].divFactorDeposited = _tokens[token].divFactorDeposited;
+            calcDivFactorDeposited(msg.sender, token);
         }
 
         uint256 _tempLockupBalance = IERC20(address(token)).balanceOf(address(lockupContract));
@@ -358,15 +313,7 @@ contract AbyssSafeBase is ReentrancyGuard, Ownable {
 
         if (_tempDepositedLockup != _tempLockupBalance) {
             if (_tempDepositedLockup > 0) {
-
-                _tempLockupDivFactor = SafeMath.div(
-                                            SafeMath.mul(
-                                                _tempLockupDivFactor,
-                                                _tempLockupBalance
-                                                ),
-                                            _tempDepositedLockup
-                                            );
-
+                _tempLockupDivFactor = calcDivFactorLockup(_tempLockupDivFactor, _tempLockupBalance, _tempDepositedLockup);
             } else {
                 lockupContract.externalTransfer(token, address(lockupContract), owner(), _tempLockupBalance, 0, 0, 0);
             }
@@ -476,17 +423,7 @@ contract AbyssSafeBase is ReentrancyGuard, Ownable {
          */
         if (_tokens[token].deposited != _tempBalanceSafe) {
             if (_tokens[token].deposited > 0) {
-
-                _tokens[token].divFactorDeposited = SafeMath.div(
-                                                        SafeMath.mul(
-                                                            _tokens[token].divFactorDeposited,
-                                                            _tempBalanceSafe
-                                                            ),
-                                                        _tokens[token].deposited
-                                                        );
-
-                _tokens[token].deposited = _tempBalanceSafe;
-
+                calcDivFactorDepositedTotal(token, _tempBalanceSafe);
             } else {
                 lockupContract.externalTransfer(token, address(this), owner(), _tempBalanceSafe, 0, _tempLockupBalance, _tempLockupDivFactor);
             }
@@ -501,72 +438,25 @@ contract AbyssSafeBase is ReentrancyGuard, Ownable {
         }
 
         if (_data[msg.sender][token].divFactorDeposited != _tokens[token].divFactorDeposited) {
-
-            _data[msg.sender][token].deposited = SafeMath.div(
-                                                    SafeMath.mul(
-                                                        _data[msg.sender][token].deposited,
-                                                        _tokens[token].divFactorDeposited
-                                                        ),
-                                                    _data[msg.sender][token].divFactorDeposited
-                                                    );
-
-            _data[msg.sender][token].divFactorDeposited = _tokens[token].divFactorDeposited;
-
+            calcDivFactorDeposited(msg.sender, token);
         }
 
         if (_tempDepositedLockup != _tempLockupBalance) {
-
-            _tempLockupDivFactor = SafeMath.div(
-                                        SafeMath.mul(
-                                            _tempLockupDivFactor,
-                                            _tempLockupBalance
-                                            ),
-                                        _tempDepositedLockup
-                                        );
+            _tempLockupDivFactor = calcDivFactorLockup(_tempLockupDivFactor, _tempLockupBalance, _tempDepositedLockup);
         }
 
         if (_tokens[token].divFactorRequested != _tempLockupDivFactor) {
-
-            _tokens[token].requested =  SafeMath.div(
-                                                  SafeMath.mul(
-                                                      _tokens[token].requested,
-                                                      _tempLockupDivFactor
-                                                      ),
-                                                  _tokens[token].divFactorRequested
-                                                  );
-
-            if (_tempLockupBalance > _tokens[token].requested) {
-                if (SafeMath.sub(_tempLockupBalance, _tokens[token].requested) == 1) {
-                    _tokens[token].requested = _tempLockupBalance;
-                }
-            }
-
-            _tokens[token].divFactorRequested = SafeMath.div(
-                                                    SafeMath.mul(
-                                                        _tokens[token].divFactorRequested,
-                                                        _tempLockupBalance
-                                                        ),
-                                                    _tempDepositedLockup
-                                                    );
-
+            calcDivFactorRequestedTotal(token, _tempLockupDivFactor, _tempLockupBalance, _tempDepositedLockup);
         }
 
         if (_data[msg.sender][token].divFactorRequested != _tokens[token].divFactorRequested) {
-
-            _tempAmount = SafeMath.div(
-                                SafeMath.mul(
-                                      _tempAmount,
-                                      _tempLockupDivFactor
-                                      ),
-                                _data[msg.sender][token].divFactorRequested
-                                );
+            _tempAmount = calcDivFactorRequested(_tempLockupDivFactor, _data[msg.sender][token].divFactorRequested, _tempAmount);
 
             if (_tempLockupBalance > _tempAmount) {
                if (SafeMath.sub(_tempLockupBalance, _tempAmount) == 1) {
                   _tempAmount = _tempLockupBalance;
                }
             }
-
             _data[msg.sender][token].divFactorRequested = _tokens[token].divFactorRequested;
         }
 
@@ -653,58 +543,21 @@ contract AbyssSafeBase is ReentrancyGuard, Ownable {
          * @dev Code that supports rebase of specific `token`.
          */
         if (_tempDepositedLockup != _tempLockupBalance) {
-
-            _tempLockupDivFactor = SafeMath.div(
-                                        SafeMath.mul(
-                                            _tempLockupDivFactor,
-                                            _tempLockupBalance
-                                            ),
-                                        _tempDepositedLockup
-                                        );
+            _tempLockupDivFactor = calcDivFactorLockup(_tempLockupDivFactor, _tempLockupBalance, _tempDepositedLockup);
         }
 
         if (_tokens[token].divFactorRequested != _tempLockupDivFactor) {
-
-            _tokens[token].requested = SafeMath.div(
-                                                  SafeMath.mul(
-                                                      _tokens[token].requested,
-                                                      _tempLockupDivFactor
-                                                      ),
-                                                  _tokens[token].divFactorRequested
-                                                  );
-
-            if (_tempLockupBalance > _tokens[token].requested) {
-                if (SafeMath.sub(_tempLockupBalance, _tokens[token].requested) == 1) {
-                    _tokens[token].requested = _tempLockupBalance;
-                }
-            }
-
-            _tokens[token].divFactorRequested = SafeMath.div(
-                                                    SafeMath.mul(
-                                                        _tokens[token].divFactorRequested,
-                                                        _tempLockupBalance
-                                                        ),
-                                                    _tempDepositedLockup
-                                                    );
-
+            calcDivFactorRequestedTotal(token, _tempLockupDivFactor, _tempLockupBalance, _tempDepositedLockup);
         }
 
         if (_data[msg.sender][token].divFactorRequested != _tokens[token].divFactorRequested) {
-
-            _tempAmount = SafeMath.div(
-                                SafeMath.mul(
-                                      _tempAmount,
-                                      _tempLockupDivFactor
-                                      ),
-                                _data[msg.sender][token].divFactorRequested
-                                );
+            _tempAmount = calcDivFactorRequested(_tempLockupDivFactor, _data[msg.sender][token].divFactorRequested, _tempAmount);
 
             if (_tokens[token].requested > _tempAmount) {
                 if (SafeMath.sub(_tokens[token].requested, _tempAmount) == 1) {
                     _tempAmount = _tokens[token].requested;
                 }
             }
-
         }
 
         delete _data[msg.sender][token].divFactorRequested;
@@ -714,7 +567,6 @@ contract AbyssSafeBase is ReentrancyGuard, Ownable {
          */
 
         _tokens[token].requested = SafeMath.sub(_tokens[token].requested, _tempAmount);
-
 
         /**
          * @dev Removes `token` divFactor if balance of the requested `token` is 0 after withdraw.
@@ -754,6 +606,93 @@ contract AbyssSafeBase is ReentrancyGuard, Ownable {
 
         lockupContract.externalTransfer(token, address(lockupContract), msg.sender, _tempAmount, 0, _tempLockupBalance, _tempLockupDivFactor);
         return true;
+
+    }
+
+    // REBASE CALCULATION FUNCTIONS
+
+    function calcDivFactorDepositedTotal(address _token, uint256 _balance) internal {
+
+        _tokens[_token].divFactorDeposited = SafeMath.div(
+                                                SafeMath.mul(
+                                                    _tokens[_token].divFactorDeposited,
+                                                    _balance
+                                                    ),
+                                                _tokens[_token].deposited
+                                                );
+
+        _tokens[_token].deposited = _balance;
+
+    }
+
+    function calcDivFactorRequestedTotal(address _token, uint256 _lockupDivFactor, uint256 _lockupBalance, uint256 _lockupDeposited) internal {
+
+        _tokens[_token].requested = SafeMath.div(
+                                                SafeMath.mul(
+                                                    _tokens[_token].requested,
+                                                    _lockupDivFactor
+                                                    ),
+                                                _tokens[_token].divFactorRequested
+                                                );
+
+
+        if (_lockupBalance > _tokens[_token].requested) {
+            if (SafeMath.sub(_lockupBalance, _tokens[_token].requested) == 1) {
+                _tokens[_token].requested = _lockupBalance;
+            }
+        }
+
+        _tokens[_token].divFactorRequested = SafeMath.div(
+                                                SafeMath.mul(
+                                                    _tokens[_token].divFactorRequested,
+                                                    _lockupBalance
+                                                    ),
+                                                _lockupDeposited
+                                                );
+
+    }
+
+    function calcDivFactorDeposited(address _owner, address _token) internal {
+
+        _data[_owner][_token].deposited = SafeMath.div(
+                                                SafeMath.mul(
+                                                    _data[_owner][_token].deposited,
+                                                    _tokens[_token].divFactorDeposited
+                                                    ),
+                                                _data[_owner][_token].divFactorDeposited
+                                                );
+
+        if (_tokens[_token].deposited > _data[_owner][_token].deposited) {
+            if (SafeMath.sub(_tokens[_token].deposited, _data[_owner][_token].deposited) == 1) {
+                _data[_owner][_token].deposited = _tokens[_token].deposited;
+            }
+        }
+
+        _data[_owner][_token].divFactorDeposited = _tokens[_token].divFactorDeposited;
+
+    }
+
+    function calcDivFactorRequested(uint256 _lockupDivFactor, uint256 _divFactorRequested, uint256 _amount) internal pure returns (uint256) {
+
+        return SafeMath.div(
+                  SafeMath.mul(
+                      _amount,
+                      _lockupDivFactor
+                      ),
+                  _divFactorRequested
+                  );
+
+    }
+
+    function calcDivFactorLockup(uint256 _lockupDivFactor, uint256 _lockupBalance, uint256 _lockupDeposited) internal pure returns (uint256) {
+
+        return SafeMath.div(
+                  SafeMath.mul(
+                      _lockupDivFactor,
+                      _lockupBalance
+                      ),
+                  _lockupDeposited
+                  );
 
     }
 
