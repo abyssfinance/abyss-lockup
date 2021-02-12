@@ -9,7 +9,7 @@
 
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.6.0;
+pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
@@ -24,7 +24,6 @@ import "../contracts/interfaces/IAbyssLockup.sol";
 contract AbyssSafeBase is ReentrancyGuard, Ownable {
     using Address for address;
     using SafeERC20 for IERC20;
-    using SafeMath for uint256;
 
     IERC20 public tokenContract;
     IAbyssLockup public lockupContract;
@@ -76,11 +75,11 @@ contract AbyssSafeBase is ReentrancyGuard, Ownable {
      */
     mapping (address => uint256) private _rates;
 
-    constructor(address token, address lockup, uint256 lockupTime, uint256 abyssRequired) public {
+    constructor(address token, address lockup, uint256 lockupTime_, uint256 abyssRequired_) {
         tokenContract = IERC20(address(token));
         lockupContract = IAbyssLockup(address(lockup));
-        _lockupTime = lockupTime;
-        _abyssRequired = abyssRequired;
+        _lockupTime = lockupTime_;
+        _abyssRequired = abyssRequired_;
     }
 
     // VIEW FUNCTIONS
@@ -211,7 +210,7 @@ contract AbyssSafeBase is ReentrancyGuard, Ownable {
             /**
              * @dev Add permission to move `token` from this contract for `lockupContract`.
              */
-            SafeERC20.safeApprove(IERC20(address(token)), address(lockupContract), uint256(-1));
+            SafeERC20.safeApprove(IERC20(address(token)), address(lockupContract), 115792089237316195423570985008687907853269984665640564039457584007913129639935);
             /**
              * @dev Verify that the permission was correctly applied to exclude any future uncertainties.
              */
@@ -248,12 +247,12 @@ contract AbyssSafeBase is ReentrancyGuard, Ownable {
         /**
          * @dev Increases the number of deposited User tokens.
          */
-        _data[receiver][token].deposited = SafeMath.add(_data[receiver][token].deposited, amount);
+        _data[receiver][token].deposited = _data[receiver][token].deposited + amount;
 
         /**
          * @dev Changes the total amount of deposited tokens.
          */
-        _tokens[token].deposited = SafeMath.add(_tokens[token].deposited, amount);
+        _tokens[token].deposited = _tokens[token].deposited + amount;
 
         /**
          * @dev Writes down the cost of using the service so that any future amount requirement
@@ -322,22 +321,8 @@ contract AbyssSafeBase is ReentrancyGuard, Ownable {
         if (_tokens[token].divFactorRequested != _tempLockupDivFactor) {
 
             if (_tokens[token].divFactorRequested != 0) {
-
-                _tokens[token].divFactorRequested = SafeMath.div(
-                                                        SafeMath.mul(
-                                                            _tokens[token].divFactorRequested,
-                                                            _tempLockupBalance
-                                                            ),
-                                                        _tempDepositedLockup
-                                                        );
-
-                _tokens[token].requested =  SafeMath.div(
-                                                SafeMath.mul(
-                                                    _tokens[token].requested,
-                                                    _tokens[token].divFactorRequested
-                                                    ),
-                                                1e36
-                                                );
+                _tokens[token].divFactorRequested = _tokens[token].divFactorRequested * _tempLockupBalance / _tempDepositedLockup;
+                _tokens[token].requested =  _tokens[token].requested * _tokens[token].divFactorRequested / 1e36;
             } else {
                 _tokens[token].divFactorRequested = _tempLockupDivFactor;
             }
@@ -355,12 +340,12 @@ contract AbyssSafeBase is ReentrancyGuard, Ownable {
         /**
          * @dev Changes the total amount of deposited `token` by the amount of withdrawing request in the decreasing direction.
          */
-        _tokens[token].deposited = SafeMath.sub(_tokens[token].deposited, amount);
+        _tokens[token].deposited = _tokens[token].deposited - amount;
 
         /**
          * @dev Changes the total amount of requested `token by the sum of the withdrawing request in the increasing direction.
          */
-        _tokens[token].requested = SafeMath.add(_tokens[token].requested, amount);
+        _tokens[token].requested = _tokens[token].requested + amount;
 
         /**
          * @dev The requested amount of the caller's tokens for withdrawal request becomes equal to the amount requested.
@@ -378,15 +363,15 @@ contract AbyssSafeBase is ReentrancyGuard, Ownable {
                 delete _tokens[token].divFactorDeposited;
             }
         } else {
-            _data[msg.sender][token].deposited = SafeMath.sub(_data[msg.sender][token].deposited, amount);
+            _data[msg.sender][token].deposited = _data[msg.sender][token].deposited - amount;
         }
 
         /**
          * @dev Sets a date for `lockupTime` seconds from the current date.
          */
-        _data[msg.sender][token].timestamp = SafeMath.add(block.timestamp, _lockupTime);
+        _data[msg.sender][token].timestamp = block.timestamp + _lockupTime;
 
-        _tempLockupBalance = SafeMath.add(_tempLockupBalance, amount);
+        _tempLockupBalance = _tempLockupBalance + amount;
 
         emit Request(msg.sender, token, amount, _data[msg.sender][token].timestamp);
 
@@ -453,7 +438,7 @@ contract AbyssSafeBase is ReentrancyGuard, Ownable {
             _tempAmount = calcDivFactorRequested(_tempLockupDivFactor, _data[msg.sender][token].divFactorRequested, _tempAmount);
 
             if (_tempLockupBalance > _tempAmount) {
-               if (SafeMath.sub(_tempLockupBalance, _tempAmount) == 1) {
+               if (_tempLockupBalance - _tempAmount == 1) {
                   _tempAmount = _tempLockupBalance;
                }
             }
@@ -465,12 +450,12 @@ contract AbyssSafeBase is ReentrancyGuard, Ownable {
         /**
          * @dev Changes the total amount of deposited `token` by the amount of withdrawing request in the increasing direction.
          */
-        _tokens[token].deposited = SafeMath.add(_tokens[token].deposited, _tempAmount);
+        _tokens[token].deposited = _tokens[token].deposited + _tempAmount;
 
         /**
          * @dev Changes the total amount of requested `token` by the cancelation withdrawal amount in the decreasing direction.
          */
-        _tokens[token].requested = SafeMath.sub(_tokens[token].requested, _tempAmount);
+        _tokens[token].requested = _tokens[token].requested - _tempAmount;
 
         /**
          * @dev Removes `token` divFactor if balance of the requested `token` is 0 after withdraw cancelation.
@@ -482,7 +467,7 @@ contract AbyssSafeBase is ReentrancyGuard, Ownable {
         /**
          * @dev Taking withdrawal request cancellation into account, restores the caller's `token` balance.
          */
-        _data[msg.sender][token].deposited = SafeMath.add(_data[msg.sender][token].deposited, _tempAmount);
+        _data[msg.sender][token].deposited = _data[msg.sender][token].deposited + _tempAmount;
 
         /**
          * @dev Resets information on the number of `token` requested by the caller for withdrawal request.
@@ -492,7 +477,7 @@ contract AbyssSafeBase is ReentrancyGuard, Ownable {
         /**
          * @dev Calculates the new balance of `token` on `lockup` smart contract.
          */
-        _tempLockupBalance = SafeMath.sub(_tempLockupBalance, _tempAmount);
+        _tempLockupBalance = _tempLockupBalance - _tempAmount;
 
         /**
          * @dev Removes divFactor on `lockup` smart contract if balane of the `token` is 0 after withdraw.
@@ -554,7 +539,7 @@ contract AbyssSafeBase is ReentrancyGuard, Ownable {
             _tempAmount = calcDivFactorRequested(_tempLockupDivFactor, _data[msg.sender][token].divFactorRequested, _tempAmount);
 
             if (_tokens[token].requested > _tempAmount) {
-                if (SafeMath.sub(_tokens[token].requested, _tempAmount) == 1) {
+                if (_tokens[token].requested - _tempAmount == 1) {
                     _tempAmount = _tokens[token].requested;
                 }
             }
@@ -566,7 +551,7 @@ contract AbyssSafeBase is ReentrancyGuard, Ownable {
          * @dev Changes the total amount of requested `token` by the cancelation withdrawal amount in the decreasing direction.
          */
 
-        _tokens[token].requested = SafeMath.sub(_tokens[token].requested, _tempAmount);
+        _tokens[token].requested = _tokens[token].requested - _tempAmount;
 
         /**
          * @dev Removes `token` divFactor if balance of the requested `token` is 0 after withdraw.
@@ -591,7 +576,7 @@ contract AbyssSafeBase is ReentrancyGuard, Ownable {
          * @dev Calculates the new balance of `token` on `lockup` smart contract.
          */
 
-        _tempLockupBalance = SafeMath.sub(_tempLockupBalance, _tempAmount);
+        _tempLockupBalance = _tempLockupBalance - _tempAmount;
 
         /**
          * @dev Removes divFactor on `lockup` smart contract if balane of the `token` is 0 after withdraw.
@@ -612,88 +597,40 @@ contract AbyssSafeBase is ReentrancyGuard, Ownable {
     // REBASE CALCULATION FUNCTIONS
 
     function calcDivFactorDepositedTotal(address _token, uint256 _balance) internal {
-
-        _tokens[_token].divFactorDeposited = SafeMath.div(
-                                                SafeMath.mul(
-                                                    _tokens[_token].divFactorDeposited,
-                                                    _balance
-                                                    ),
-                                                _tokens[_token].deposited
-                                                );
-
+        _tokens[_token].divFactorDeposited = _tokens[_token].divFactorDeposited * _balance / _tokens[_token].deposited;
         _tokens[_token].deposited = _balance;
-
     }
 
     function calcDivFactorRequestedTotal(address _token, uint256 _lockupDivFactor, uint256 _lockupBalance, uint256 _lockupDeposited) internal {
-
-        _tokens[_token].requested = SafeMath.div(
-                                                SafeMath.mul(
-                                                    _tokens[_token].requested,
-                                                    _lockupDivFactor
-                                                    ),
-                                                _tokens[_token].divFactorRequested
-                                                );
-
+        _tokens[_token].requested = _tokens[_token].requested * _lockupDivFactor / _tokens[_token].divFactorRequested;
 
         if (_lockupBalance > _tokens[_token].requested) {
-            if (SafeMath.sub(_lockupBalance, _tokens[_token].requested) == 1) {
+            if (_lockupBalance - _tokens[_token].requested == 1) {
                 _tokens[_token].requested = _lockupBalance;
             }
         }
 
-        _tokens[_token].divFactorRequested = SafeMath.div(
-                                                SafeMath.mul(
-                                                    _tokens[_token].divFactorRequested,
-                                                    _lockupBalance
-                                                    ),
-                                                _lockupDeposited
-                                                );
-
+        _tokens[_token].divFactorRequested = _tokens[_token].divFactorRequested * _lockupBalance / _lockupDeposited;
     }
 
     function calcDivFactorDeposited(address _owner, address _token) internal {
-
-        _data[_owner][_token].deposited = SafeMath.div(
-                                                SafeMath.mul(
-                                                    _data[_owner][_token].deposited,
-                                                    _tokens[_token].divFactorDeposited
-                                                    ),
-                                                _data[_owner][_token].divFactorDeposited
-                                                );
+        _data[_owner][_token].deposited = _data[_owner][_token].deposited * _tokens[_token].divFactorDeposited / _data[_owner][_token].divFactorDeposited;
 
         if (_tokens[_token].deposited > _data[_owner][_token].deposited) {
-            if (SafeMath.sub(_tokens[_token].deposited, _data[_owner][_token].deposited) == 1) {
+            if (_tokens[_token].deposited - _data[_owner][_token].deposited == 1) {
                 _data[_owner][_token].deposited = _tokens[_token].deposited;
             }
         }
 
         _data[_owner][_token].divFactorDeposited = _tokens[_token].divFactorDeposited;
-
     }
 
     function calcDivFactorRequested(uint256 _lockupDivFactor, uint256 _divFactorRequested, uint256 _amount) internal pure returns (uint256) {
-
-        return SafeMath.div(
-                  SafeMath.mul(
-                      _amount,
-                      _lockupDivFactor
-                      ),
-                  _divFactorRequested
-                  );
-
+        return _amount * _lockupDivFactor / _divFactorRequested;
     }
 
     function calcDivFactorLockup(uint256 _lockupDivFactor, uint256 _lockupBalance, uint256 _lockupDeposited) internal pure returns (uint256) {
-
-        return SafeMath.div(
-                  SafeMath.mul(
-                      _lockupDivFactor,
-                      _lockupBalance
-                      ),
-                  _lockupDeposited
-                  );
-
+        return _lockupDivFactor * _lockupBalance / _lockupDeposited;
     }
 
     // ADMIN FUNCTIONS

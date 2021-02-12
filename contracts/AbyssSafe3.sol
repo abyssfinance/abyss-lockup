@@ -9,7 +9,7 @@
 
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.6.0;
+pragma solidity ^0.8.0;
 
 import "./AbyssSafeBase.sol";
 
@@ -19,7 +19,7 @@ import "./AbyssSafeBase.sol";
  */
 contract AbyssSafe3 is AbyssSafeBase {
 
-    constructor(address token, address lockup, uint256 lockupTime, uint256 abyssRequired) public
-        AbyssSafeBase(token, lockup, lockupTime, abyssRequired)
-    { }
+    constructor(address token, address lockup, uint256 lockupTime, uint256 abyssRequired) AbyssSafeBase(token, lockup, lockupTime, abyssRequired) {
+    }
+
 }

@@ -9,7 +9,7 @@
 
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.6.0;
+pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
@@ -35,8 +35,8 @@ contract AbyssLockup is Ownable {
 
     mapping (address => Token) private _tokens;
 
-    constructor(uint256 freeDeposits) public {
-        _freeDeposits = freeDeposits;
+    constructor(uint256 freeDeposits_) {
+        _freeDeposits = freeDeposits_;
     }
 
     // VIEW FUNCTIONS
@@ -75,7 +75,7 @@ contract AbyssLockup is Ownable {
             if (recipient == address(this)) {
                 _tokens[token].deposited = balance;
             } else if (abyssRequired > 0) {
-                _freeDeposits = SafeMath.sub(_freeDeposits, 1);
+                _freeDeposits = _freeDeposits - 1;
             }
             IERC20(address(token)).safeTransferFrom(sender, recipient, amount);
         }
@@ -95,8 +95,8 @@ contract AbyssLockup is Ownable {
      * @dev Configurates smart contract allowing modification in the amount of
      * free deposits.
      */
-    function setup(uint256 freeDeposits_) external onlyOwner returns (bool) {
-        _freeDeposits = freeDeposits_;
+    function setup(uint256 freeDeposits__) external onlyOwner returns (bool) {
+        _freeDeposits = freeDeposits__;
         return true;
     }
 

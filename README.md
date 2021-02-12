@@ -14,8 +14,8 @@ Contracts
 Below is a list of contracts we use for this service:
 
 <dl>
-  <dt>SafeERC20, Ownable, ReentrancyGuard</dt>
-  <dd>Openzepellin smart contracts. The first one allows to transfer and to approve ERC20 tokens safely. The second one allows for managing ownership. The last one protects from re-entrance attacks.</dd>
+  <dt>SafeERC20, Ownable, Address, ReentrancyGuard</dt>
+  <dd>Openzepellin smart contracts. The first one allows to transfer and to approve ERC20 tokens safely. The second one allows for managing ownership. The third one allows to check if the address is a smart contract or not. The last one protects from re-entrance attacks.</dd>
 </dl>
 
 <dl>
@@ -24,23 +24,28 @@ Below is a list of contracts we use for this service:
 </dl>
 
 <dl>
+  <dt>AbyssSafeBase</dt>
+  <dd>The main smart contract that contains all functions of Safe contracts.</dd>
+</dl>
+
+<dl>
   <dt>AbyssSafe1</dt>
-  <dd>The main smart contract responsible for deposits and withdrawal of tokens. 2592000 seconds (1 month) lockup delay setting should be applied on deployment.</dd>
+  <dd>Smart contract responsible for deposits and withdrawal of tokens. 2592000 seconds (1 month) lockup delay setting should be applied on deployment.</dd>
 </dl>
 
 <dl>
   <dt>AbyssSafe3</dt>
-  <dd>The main smart contract responsible for deposits and withdrawal of tokens. 7776000 seconds (3 months) lockup delay setting should be applied on deployment.</dd>
+  <dd>Smart contract responsible for deposits and withdrawal of tokens. 7776000 seconds (3 months) lockup delay setting should be applied on deployment.</dd>
 </dl>
 
 <dl>
   <dt>AbyssSafe6</dt>
-  <dd>The main smart contract responsible for deposits and withdrawal of tokens. 15552000 seconds (6 months) lockup delay setting should be applied on deployment.</dd>
+  <dd>Smart contract responsible for deposits and withdrawal of tokens. 15552000 seconds (6 months) lockup delay setting should be applied on deployment.</dd>
 </dl>
 
 <dl>
   <dt>AbyssSafe12</dt>
-  <dd>The main smart contract responsible for deposits and withdrawal of tokens. 31536000 seconds (1 year) lockup delay setting should be applied on deployment.</dd>
+  <dd>Smart contract responsible for deposits and withdrawal of tokens. 31536000 seconds (1 year) lockup delay setting should be applied on deployment.</dd>
 </dl>
 
 Installation
