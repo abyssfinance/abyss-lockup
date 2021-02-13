@@ -6,7 +6,7 @@ Abyss Lockup service allows you to lock any ERC20 token with strict period of wi
   - All ERC20 tokens supported (LP tokens as well).
   - All forms of rebase are supported.
   - 1, 3, 6 and 12 months unlock time available.
-  - Service is Free of charge when you hold the Abyss Token at all steps of 1, 3 and 6 months unlock time and without any requirements for a 12 month unlock time.
+  - Service is Free of charge when you hold the Abyss Token at all steps of 1, 3 and 6 months unlock waiting period and without any requirements for a 12 months unlock waiting period.
 
 Contracts
 =========
@@ -75,10 +75,10 @@ Deployment (Mainnet)
 Smart contracts should be deployed in such order:
 
 1. `AbyssLockup.sol` _(100)_
-2. `AbyssSafe1.sol`_(0x0e8d6b471e332f140e7d9dbb99e5e3822f728da6, AbyssLockup_address, 2592000, 100000000000000000000000)_
-2. `AbyssSafe3.sol`_(0x0e8d6b471e332f140e7d9dbb99e5e3822f728da6, AbyssLockup_address, 7776000, 10000000000000000000000)_
-3. `AbyssSafe6.sol`_(0x0e8d6b471e332f140e7d9dbb99e5e3822f728da6, AbyssLockup_address, 15552000, 1000000000000000000000)_
-4. `AbyssSafe12.sol`_(0x0e8d6b471e332f140e7d9dbb99e5e3822f728da6, AbyssLockup_address, 31536000, 0)_
+2. `AbyssSafe1.sol`_(0x0e8d6b471e332f140e7d9dbb99e5e3822f728da6, AbyssLockup_address, 100000000000000000000000)_
+2. `AbyssSafe3.sol`_(0x0e8d6b471e332f140e7d9dbb99e5e3822f728da6, AbyssLockup_address, 10000000000000000000000)_
+3. `AbyssSafe6.sol`_(0x0e8d6b471e332f140e7d9dbb99e5e3822f728da6, AbyssLockup_address, 1000000000000000000000)_
+4. `AbyssSafe12.sol`_(0x0e8d6b471e332f140e7d9dbb99e5e3822f728da6, AbyssLockup_address, 0)_
 5. Call _initialize(AbyssSafe1_address, AbyssSafe3_address, AbyssSafe6_address, AbyssSafe12_address)_ function from the `owner` on `AbyssLockup` contract.
 
 How to Use

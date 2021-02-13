@@ -27,7 +27,7 @@ contract AbyssSafeBase is ReentrancyGuard, Ownable {
 
     IERC20 public tokenContract;
     IAbyssLockup public lockupContract;
-    uint256 private _lockupTime;
+    uint256 private _unlockTime;
     uint256 private _abyssRequired;
 
     /**
@@ -75,20 +75,20 @@ contract AbyssSafeBase is ReentrancyGuard, Ownable {
      */
     mapping (address => uint256) private _rates;
 
-    constructor(address token, address lockup, uint256 lockupTime_, uint256 abyssRequired_) {
+    constructor(address token, address lockup, uint256 unlockTime_, uint256 abyssRequired_) {
         tokenContract = IERC20(address(token));
         lockupContract = IAbyssLockup(address(lockup));
-        _lockupTime = lockupTime_;
+        _unlockTime = unlockTime_;
         _abyssRequired = abyssRequired_;
     }
 
     // VIEW FUNCTIONS
 
     /**
-     * @dev Lockup delay (in seconds) after withdrawal request.
+     * @dev Unlock waiting period (in seconds) after withdrawal request.
      */
-    function lockupTime() public view returns (uint256) {
-        return _lockupTime;
+    function unlockTime() virtual public view returns (uint256) {
+        return _unlockTime;
     }
 
     /**
@@ -199,9 +199,6 @@ contract AbyssSafeBase is ReentrancyGuard, Ownable {
         require(IERC20(address(token)).allowance(msg.sender, address(lockupContract)) > amount, "AbyssSafe: you need to approve token first");
         require(IERC20(address(token)).balanceOf(msg.sender) >= amount && amount > 0, "AbyssSafe: you cannot lock this amount");
 
-        if (IERC20(address(token)).balanceOf(address(this)) == 0 && _tokens[token].deposited > 0) {
-            revert("AbyssSafe: something went wrong");
-        }
         /**
          * @dev Verifies that the `lockupContract` has permission to move a given token located on this contract.
          */
@@ -369,7 +366,7 @@ contract AbyssSafeBase is ReentrancyGuard, Ownable {
         /**
          * @dev Sets a date for `lockupTime` seconds from the current date.
          */
-        _data[msg.sender][token].timestamp = block.timestamp + _lockupTime;
+        _data[msg.sender][token].timestamp = block.timestamp + unlockTime();
 
         _tempLockupBalance = _tempLockupBalance + amount;
 
@@ -514,7 +511,7 @@ contract AbyssSafeBase is ReentrancyGuard, Ownable {
             tokenContract.balanceOf(msg.sender) >= _rates[msg.sender],
             "AbyssSafe: not enough Abyss");
         require(_data[msg.sender][token].requested > 0, "AbyssSafe: request withdraw first");
-        require(_data[msg.sender][token].timestamp < block.timestamp, "AbyssSafe: patience you must have!");
+        require(_data[msg.sender][token].timestamp <= block.timestamp, "AbyssSafe: patience you must have!");
 
         uint256 _tempAmount = _data[msg.sender][token].requested;
 
