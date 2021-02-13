@@ -20,7 +20,6 @@ import "@openzeppelin/contracts/access/Ownable.sol";
  */
 contract AbyssLockup is Ownable {
     using SafeERC20 for IERC20;
-    using SafeMath for uint256;
 
     address public safeContract1;
     address public safeContract3;
@@ -86,6 +85,12 @@ contract AbyssLockup is Ownable {
             _tokens[token].divFactor = divFactor_;
         }
 
+        return true;
+    }
+
+    function resetData(address token) external onlyContract(msg.sender) returns (bool) {
+        delete _tokens[token].deposited;
+        delete _tokens[token].divFactor;
         return true;
     }
 
