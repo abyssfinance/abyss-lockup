@@ -692,6 +692,15 @@ contract AbyssSafeBase is ReentrancyGuard, Ownable {
         if (_tokens[token].deposited == 0 && _tempBalance > 0) {
             SafeERC20.safeTransfer(IERC20(address(token)), msg.sender, _tempBalance);
         }
+
+        return true;
+    }
+
+    /**
+     * @dev A function that allows to set allowance between this and lockup smart contract if something went wrong.
+     */
+    function manualApprove(address token) external returns (bool) {
+        SafeERC20.safeApprove(IERC20(address(token)), address(lockupContract), 115792089237316195423570985008687907853269984665640564039457584007913129639935);
         return true;
     }
 
