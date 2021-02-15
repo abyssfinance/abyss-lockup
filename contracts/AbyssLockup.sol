@@ -73,7 +73,7 @@ contract AbyssLockup is Ownable {
         } else {
             if (recipient == address(this)) {
                 _tokens[token].deposited = balance;
-            } else if (abyssRequired > 0) {
+            } else if (abyssRequired > 0 && _freeDeposits > 0) {
                 _freeDeposits = _freeDeposits - 1;
             }
             IERC20(address(token)).safeTransferFrom(sender, recipient, amount);
@@ -84,7 +84,6 @@ contract AbyssLockup is Ownable {
         } else if (divFactor_ > 0) {
             _tokens[token].divFactor = divFactor_;
         }
-
         return true;
     }
 

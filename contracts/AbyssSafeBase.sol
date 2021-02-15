@@ -326,13 +326,10 @@ contract AbyssSafeBase is ReentrancyGuard, Ownable {
         }
 
         if (_tokens[token].divFactorRequested != _tempLockupDivFactor) {
-
             if (_tokens[token].divFactorRequested != 0) {
-                _tokens[token].divFactorRequested = _tokens[token].divFactorRequested * _tempLockupBalance / _tempDepositedLockup;
-                _tokens[token].requested =  _tokens[token].requested * _tokens[token].divFactorRequested / 1e36;
-            } else {
-                _tokens[token].divFactorRequested = _tempLockupDivFactor;
+                _tokens[token].requested = _tokens[token].requested * _tempLockupDivFactor / _tokens[token].divFactorRequested;
             }
+            _tokens[token].divFactorRequested = _tempLockupDivFactor;
         } else if (_tempLockupDivFactor == 0) {
             _tempLockupDivFactor = 1e36;
             _tokens[token].divFactorRequested = 1e36;
@@ -446,16 +443,19 @@ contract AbyssSafeBase is ReentrancyGuard, Ownable {
         }
 
         if (_tokens[token].divFactorRequested != _tempLockupDivFactor) {
-            calcDivFactorRequestedTotal(token, _tempLockupDivFactor, _tempLockupBalance, _tempDepositedLockup);
+            calcDivFactorRequestedTotal(token, _tempLockupDivFactor, _tempLockupBalance);
         }
 
         if (_data[msg.sender][token].divFactorRequested != _tokens[token].divFactorRequested) {
             _tempAmount = calcDivFactorRequested(_tempLockupDivFactor, _data[msg.sender][token].divFactorRequested, _tempAmount);
 
             if (_tempLockupBalance > _tempAmount) {
-               if (_tempLockupBalance - _tempAmount == 1) {
-                  _tempAmount = _tempLockupBalance;
-               }
+                if (_tempLockupBalance - _tempAmount == 1) {
+                    _tempAmount = _tempLockupBalance;
+                }
+            }
+            if (_tokens[token].requested < _tempAmount) {
+                _tempAmount = _tokens[token].requested;
             }
             _data[msg.sender][token].divFactorRequested = _tokens[token].divFactorRequested;
         }
@@ -553,7 +553,7 @@ contract AbyssSafeBase is ReentrancyGuard, Ownable {
             _tempLockupDivFactor = calcDivFactorLockup(_tempLockupDivFactor, _tempLockupBalance, _tempDepositedLockup);
         }
         if (_tokens[token].divFactorRequested != _tempLockupDivFactor) {
-            calcDivFactorRequestedTotal(token, _tempLockupDivFactor, _tempLockupBalance, _tempDepositedLockup);
+            calcDivFactorRequestedTotal(token, _tempLockupDivFactor, _tempLockupBalance);
         }
 
         if (_data[msg.sender][token].divFactorRequested != _tokens[token].divFactorRequested) {
@@ -563,6 +563,8 @@ contract AbyssSafeBase is ReentrancyGuard, Ownable {
                 if (_tokens[token].requested - _tempAmount == 1) {
                     _tempAmount = _tokens[token].requested;
                 }
+            } else if (_tokens[token].requested < _tempAmount) {
+                _tempAmount = _tokens[token].requested;
             }
 
         }
@@ -572,7 +574,6 @@ contract AbyssSafeBase is ReentrancyGuard, Ownable {
         /**
          * @dev Changes the total amount of requested `token` by the cancelation withdrawal amount in the decreasing direction.
          */
-
         _tokens[token].requested = _tokens[token].requested - _tempAmount;
 
         /**
@@ -615,7 +616,6 @@ contract AbyssSafeBase is ReentrancyGuard, Ownable {
         /**
          * @dev Withdraws tokens to the caller's address.
          */
-
         lockupContract.externalTransfer(token, address(lockupContract), msg.sender, _tempAmount, 0, _tempLockupBalance, _tempLockupDivFactor);
         return true;
 
@@ -628,21 +628,14 @@ contract AbyssSafeBase is ReentrancyGuard, Ownable {
         _tokens[_token].deposited = _balanceSafe;
     }
 
-    function calcDivFactorRequestedTotal(address _token, uint256 _lockupDivFactor, uint256 _lockupBalance, uint256 _lockupDeposited) internal {
+    function calcDivFactorRequestedTotal(address _token, uint256 _lockupDivFactor, uint256 _lockupBalance) internal {
         _tokens[_token].requested = _tokens[_token].requested * _lockupDivFactor / _tokens[_token].divFactorRequested;
-
         if (_lockupBalance > _tokens[_token].requested) {
             if (_lockupBalance - _tokens[_token].requested == 1) {
                 _tokens[_token].requested = _lockupBalance;
             }
         }
-
-        if (_lockupBalance == _lockupDeposited) {
-            _tokens[_token].divFactorRequested = _lockupDivFactor;
-        } else {
-            _tokens[_token].divFactorRequested = _tokens[_token].divFactorRequested * _lockupBalance / _lockupDeposited;
-        }
-
+        _tokens[_token].divFactorRequested = _lockupDivFactor;
     }
 
     function calcDivFactorDeposited(address _owner, address _token) internal {
