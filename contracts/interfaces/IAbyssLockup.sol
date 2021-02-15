@@ -35,10 +35,12 @@ interface IAbyssLockup {
      *
      * Returns a boolean value indicating whether the operation succeeded.
      */
-    function externalTransfer(address token, address sender, address recipient, uint256 amount, uint256 abyssRequired, uint256 balance, uint256 divFactor_) external returns (bool);
+    function externalTransfer(address token, address sender, address recipient, uint256 amount, uint256 abyssRequired) external returns (bool);
 
     /**
      * @dev Removes deposited and divfactor data for specific token. Used by Safe smart contract only.
      */
     function resetData(address token) external returns (bool);
+
+    function updateData(address token, uint256 balance, uint256 divFactor_) external returns (bool);
 }

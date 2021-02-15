@@ -66,23 +66,14 @@ contract AbyssLockup is Ownable {
     /**
      * @dev See {IAbyssLockup-externalTransfer}.
      */
-    function externalTransfer(address token, address sender, address recipient, uint256 amount, uint256 abyssRequired, uint256 balance, uint256 divFactor_) external onlyContract(msg.sender) returns (bool) {
+    function externalTransfer(address token, address sender, address recipient, uint256 amount, uint256 abyssRequired) external onlyContract(msg.sender) returns (bool) {
         if (sender == address(this)) {
-            _tokens[token].deposited = balance;
             IERC20(address(token)).safeTransfer(recipient, amount);
         } else {
-            if (recipient == address(this)) {
-                _tokens[token].deposited = balance;
-            } else if (abyssRequired > 0 && _freeDeposits > 0) {
+            if (recipient != address(this) && abyssRequired > 0 && _freeDeposits > 0) {
                 _freeDeposits = _freeDeposits - 1;
             }
             IERC20(address(token)).safeTransferFrom(sender, recipient, amount);
-        }
-
-        if (divFactor_ == 1) {
-            delete _tokens[token].divFactor;
-        } else if (divFactor_ > 0) {
-            _tokens[token].divFactor = divFactor_;
         }
         return true;
     }
@@ -90,6 +81,16 @@ contract AbyssLockup is Ownable {
     function resetData(address token) external onlyContract(msg.sender) returns (bool) {
         delete _tokens[token].deposited;
         delete _tokens[token].divFactor;
+        return true;
+    }
+
+    function updateData(address token, uint256 balance, uint256 divFactor_) external onlyContract(msg.sender) returns (bool) {
+        _tokens[token].deposited = balance;
+        if (divFactor_ == 1) {
+            delete _tokens[token].divFactor;
+        } else if (divFactor_ > 0) {
+            _tokens[token].divFactor = divFactor_;
+        }
         return true;
     }
 

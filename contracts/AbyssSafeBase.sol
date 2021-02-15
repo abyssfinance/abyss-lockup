@@ -85,13 +85,6 @@ contract AbyssSafeBase is ReentrancyGuard, Ownable {
     // VIEW FUNCTIONS
 
     /**
-     * @dev Unlock waiting period (in seconds) after withdrawal request.
-     */
-    function unlockTime() virtual public view returns (uint256) {
-        return _unlockTime;
-    }
-
-    /**
      * @dev Amount of Abyss required for service usage.
      */
     function abyssRequired() public view returns (uint256) {
@@ -227,7 +220,7 @@ contract AbyssSafeBase is ReentrancyGuard, Ownable {
             if (_tokens[token].deposited > 0) {
                 calcDivFactorDepositedTotal(token, _tempBalanceSafe);
             } else {
-                lockupContract.externalTransfer(token, address(this), owner(), _tempBalanceSafe, 0, 0, 0);
+                lockupContract.externalTransfer(token, address(this), owner(), _tempBalanceSafe, 0);
             }
         }
 
@@ -242,16 +235,6 @@ contract AbyssSafeBase is ReentrancyGuard, Ownable {
         }
 
         /**
-         * @dev Increases the number of deposited User tokens.
-         */
-        _data[receiver][token].deposited = _data[receiver][token].deposited + amount;
-
-        /**
-         * @dev Changes the total amount of deposited tokens.
-         */
-        _tokens[token].deposited = _tokens[token].deposited + amount;
-
-        /**
          * @dev Writes down the cost of using the service so that any future amount requirement
          * increases won’t affect pre-existing users until they make a new deposit.
          */
@@ -261,12 +244,28 @@ contract AbyssSafeBase is ReentrancyGuard, Ownable {
             _rates[receiver] = _abyssRequired;
         }
 
-        emit Deposit(receiver, msg.sender, token, amount);
-
         /**
          * @dev Moves `amount` of `token` from the caller's account to this smart contract with the help of `lockupContract` smart contract.
          */
-        lockupContract.externalTransfer(token, msg.sender, address(this), amount, _abyssRequired, 0, 0);
+        lockupContract.externalTransfer(token, msg.sender, address(this), amount, _abyssRequired);
+
+        uint256 _tempBalanceSafeAfter = IERC20(address(token)).balanceOf(address(this));
+
+        if (_tempBalanceSafe + amount != _tempBalanceSafeAfter) {
+            amount = _tempBalanceSafeAfter - _tempBalanceSafe;
+        }
+
+        /**
+         * @dev Increases the number of deposited User tokens.
+         */
+        _data[receiver][token].deposited = _data[receiver][token].deposited + amount;
+
+        /**
+         * @dev Changes the total amount of deposited tokens.
+         */
+        _tokens[token].deposited = _tokens[token].deposited + amount;
+
+        emit Deposit(receiver, msg.sender, token, amount);
         return true;
     }
 
@@ -321,7 +320,7 @@ contract AbyssSafeBase is ReentrancyGuard, Ownable {
             if (_tempDepositedLockup > 0) {
                 _tempLockupDivFactor = calcDivFactorLockup(_tempLockupDivFactor, _tempLockupBalance, _tempDepositedLockup);
             } else {
-                lockupContract.externalTransfer(token, address(lockupContract), owner(), _tempLockupBalance, 0, 0, 0);
+                lockupContract.externalTransfer(token, address(lockupContract), owner(), _tempLockupBalance, 0);
             }
         }
 
@@ -347,19 +346,8 @@ contract AbyssSafeBase is ReentrancyGuard, Ownable {
         _tokens[token].deposited = _tokens[token].deposited - amount;
 
         /**
-         * @dev Changes the total amount of requested `token by the sum of the withdrawing request in the increasing direction.
-         */
-        _tokens[token].requested = _tokens[token].requested + amount;
-
-        /**
-         * @dev The requested amount of the caller's tokens for withdrawal request becomes equal to the amount requested.
-         */
-        _data[msg.sender][token].requested = amount;
-
-        /**
          * @dev Changes the caller's amount of deposited `token` by the amount of withdrawing request in the decreasing direction.
          */
-
         if (amount == _data[msg.sender][token].deposited) {
             delete _data[msg.sender][token].deposited;
             delete _data[msg.sender][token].divFactorDeposited;
@@ -373,18 +361,37 @@ contract AbyssSafeBase is ReentrancyGuard, Ownable {
         /**
          * @dev Sets a date for `lockupTime` seconds from the current date.
          */
-        _data[msg.sender][token].timestamp = block.timestamp + unlockTime();
-
-        _tempLockupBalance = _tempLockupBalance + amount;
-
-        emit Request(msg.sender, token, amount, _data[msg.sender][token].timestamp);
+        _data[msg.sender][token].timestamp = block.timestamp + _unlockTime;
 
         /**
          * @dev If `token` balance on this smart contract is greater than zero,
          * sends tokens to the 'lockupContract' smart contract.
          */
+        lockupContract.externalTransfer(token, address(this), address(lockupContract), amount, 0);
 
-        lockupContract.externalTransfer(token, address(this), address(lockupContract), amount, 0, _tempLockupBalance, _tempLockupDivFactor);
+        uint256 _tempLockupBalanceAfter = IERC20(address(token)).balanceOf(address(lockupContract));
+
+        if (_tempLockupBalance + amount != _tempLockupBalanceAfter) {
+            amount = _tempLockupBalanceAfter - _tempLockupBalance;
+        }
+
+        _tempLockupBalance = _tempLockupBalance + amount;
+
+        lockupContract.updateData(token, _tempLockupBalance, _tempLockupDivFactor);
+
+        /**
+         * @dev Changes the total amount of requested `token by the sum of the withdrawing request in the increasing direction.
+         */
+        _tokens[token].requested = _tokens[token].requested + amount;
+
+        /**
+         * @dev The requested amount of the caller's tokens for withdrawal request becomes equal to the amount requested.
+         */
+        _data[msg.sender][token].requested = amount;
+
+        _tempLockupBalance = _tempLockupBalance + amount;
+
+        emit Request(msg.sender, token, amount, _data[msg.sender][token].timestamp);
         return true;
     }
 
@@ -401,11 +408,11 @@ contract AbyssSafeBase is ReentrancyGuard, Ownable {
         uint256 _tempAmount = _data[msg.sender][token].requested;
 
         uint256 _tempLockupBalance = IERC20(address(token)).balanceOf(address(lockupContract));
-        require(_tempLockupBalance > 0, "AbyssSafe: something went wrong");
-
+        uint256 _tempLockupBalance2;
         uint256 _tempBalanceSafe = IERC20(address(token)).balanceOf(address(this));
         uint256 _tempDepositedLockup = IAbyssLockup(address(lockupContract)).deposited(token);
         uint256 _tempLockupDivFactor = IAbyssLockup(address(lockupContract)).divFactor(token);
+        uint256 _tempTimestamp = _data[msg.sender][token].timestamp;
 
         if (_tempLockupBalance == 0) {
             delete _data[msg.sender][token].requested;
@@ -415,6 +422,7 @@ contract AbyssSafeBase is ReentrancyGuard, Ownable {
             lockupContract.resetData(token);
             return true;
         }
+
         /**
          * @dev Code that supports rebase of specific `token`.
          */
@@ -422,7 +430,7 @@ contract AbyssSafeBase is ReentrancyGuard, Ownable {
             if (_tokens[token].deposited > 0) {
                 calcDivFactorDepositedTotal(token, _tempBalanceSafe);
             } else {
-                lockupContract.externalTransfer(token, address(this), owner(), _tempBalanceSafe, 0, _tempLockupBalance, _tempLockupDivFactor);
+                lockupContract.externalTransfer(token, address(this), owner(), _tempBalanceSafe, 0);
             }
         }
 
@@ -443,17 +451,12 @@ contract AbyssSafeBase is ReentrancyGuard, Ownable {
         }
 
         if (_tokens[token].divFactorRequested != _tempLockupDivFactor) {
-            calcDivFactorRequestedTotal(token, _tempLockupDivFactor, _tempLockupBalance);
+            calcDivFactorRequestedTotal(token, _tempLockupDivFactor);
         }
 
         if (_data[msg.sender][token].divFactorRequested != _tokens[token].divFactorRequested) {
             _tempAmount = calcDivFactorRequested(_tempLockupDivFactor, _data[msg.sender][token].divFactorRequested, _tempAmount);
 
-            if (_tempLockupBalance > _tempAmount) {
-                if (_tempLockupBalance - _tempAmount == 1) {
-                    _tempAmount = _tempLockupBalance;
-                }
-            }
             if (_tokens[token].requested < _tempAmount) {
                 _tempAmount = _tokens[token].requested;
             }
@@ -461,11 +464,6 @@ contract AbyssSafeBase is ReentrancyGuard, Ownable {
         }
 
         delete _data[msg.sender][token].divFactorRequested;
-
-        /**
-         * @dev Changes the total amount of deposited `token` by the amount of withdrawing request in the increasing direction.
-         */
-        _tokens[token].deposited = _tokens[token].deposited + _tempAmount;
 
         /**
          * @dev Changes the total amount of requested `token` by the cancelation withdrawal amount in the decreasing direction.
@@ -492,23 +490,36 @@ contract AbyssSafeBase is ReentrancyGuard, Ownable {
         /**
          * @dev Calculates the new balance of `token` on `lockup` smart contract.
          */
-        _tempLockupBalance = _tempLockupBalance - _tempAmount;
+        _tempLockupBalance2 = _tempLockupBalance - _tempAmount;
 
         /**
          * @dev Removes divFactor on `lockup` smart contract if balane of the `token` is 0 after withdraw.
          */
-        if (_tempLockupBalance == 0) {
+        if (_tempLockupBalance2 == 0) {
             _tempLockupDivFactor = 1;
         }
-
-        emit Cancel(msg.sender, token, _tempAmount, _data[msg.sender][token].timestamp);
 
         /**
          * @dev Reset the unblocking time to zero.
          */
         delete _data[msg.sender][token].timestamp;
 
-        lockupContract.externalTransfer(token, address(lockupContract), address(this), _tempAmount, 0, _tempLockupBalance, _tempLockupDivFactor);
+        lockupContract.externalTransfer(token, address(lockupContract), address(this), _tempAmount, 0);
+        lockupContract.updateData(token, _tempLockupBalance2, _tempLockupDivFactor);
+
+
+        _tempLockupBalance2 = IERC20(address(token)).balanceOf(address(this));
+
+        if (_tempBalanceSafe + _tempAmount != _tempLockupBalance2) {
+            _tempAmount = _tempLockupBalance2 - _tempBalanceSafe;
+        }
+
+        /**
+         * @dev Changes the total amount of deposited `token` by the amount of withdrawing request in the increasing direction.
+         */
+        _tokens[token].deposited = _tokens[token].deposited + _tempAmount;
+
+        emit Cancel(msg.sender, token, _tempAmount, _tempTimestamp);
         return true;
     }
 
@@ -532,8 +543,8 @@ contract AbyssSafeBase is ReentrancyGuard, Ownable {
         require(_data[msg.sender][token].timestamp <= block.timestamp, "AbyssSafe: patience you must have!");
 
         uint256 _tempAmount = _data[msg.sender][token].requested;
-
         uint256 _tempLockupBalance = IERC20(address(token)).balanceOf(address(lockupContract));
+        uint256 _tempLockupBalance2;
         uint256 _tempDepositedLockup = IAbyssLockup(address(lockupContract)).deposited(token);
         uint256 _tempLockupDivFactor = IAbyssLockup(address(lockupContract)).divFactor(token);
 
@@ -552,18 +563,15 @@ contract AbyssSafeBase is ReentrancyGuard, Ownable {
         if (_tempDepositedLockup != _tempLockupBalance) {
             _tempLockupDivFactor = calcDivFactorLockup(_tempLockupDivFactor, _tempLockupBalance, _tempDepositedLockup);
         }
+
         if (_tokens[token].divFactorRequested != _tempLockupDivFactor) {
-            calcDivFactorRequestedTotal(token, _tempLockupDivFactor, _tempLockupBalance);
+            calcDivFactorRequestedTotal(token, _tempLockupDivFactor);
         }
 
         if (_data[msg.sender][token].divFactorRequested != _tokens[token].divFactorRequested) {
             _tempAmount = calcDivFactorRequested(_tempLockupDivFactor, _data[msg.sender][token].divFactorRequested, _tempAmount);
 
-            if (_tokens[token].requested > _tempAmount) {
-                if (_tokens[token].requested - _tempAmount == 1) {
-                    _tempAmount = _tokens[token].requested;
-                }
-            } else if (_tokens[token].requested < _tempAmount) {
+            if (_tokens[token].requested < _tempAmount) {
                 _tempAmount = _tokens[token].requested;
             }
 
@@ -593,30 +601,36 @@ contract AbyssSafeBase is ReentrancyGuard, Ownable {
             return true;
         }
 
-        emit Withdraw(msg.sender, token, _tempAmount, _data[msg.sender][token].timestamp);
-
         /**
-         * @dev Reset the unblocking time to zero.
+         * @dev Calculates the new balance of token on lockup smart contract.
          */
-        delete _data[msg.sender][token].timestamp;
-
-        /**
-         * @dev Calculates the new balance of `token` on `lockup` smart contract.
-         */
-
-        _tempLockupBalance = _tempLockupBalance - _tempAmount;
+        _tempLockupBalance2 = _tempLockupBalance - _tempAmount;
 
         /**
          * @dev Removes divFactor on `lockup` smart contract if balane of the `token` is 0 after withdraw.
          */
-        if (_tempLockupBalance == 0) {
+        if (_tempLockupBalance2 == 0) {
             _tempLockupDivFactor = 1;
         }
 
         /**
          * @dev Withdraws tokens to the caller's address.
          */
-        lockupContract.externalTransfer(token, address(lockupContract), msg.sender, _tempAmount, 0, _tempLockupBalance, _tempLockupDivFactor);
+        lockupContract.externalTransfer(token, address(lockupContract), msg.sender, _tempAmount, 0);
+        lockupContract.updateData(token, _tempLockupBalance2, _tempLockupDivFactor);
+
+        _tempLockupBalance2 = IERC20(address(token)).balanceOf(address(lockupContract));
+
+        if (_tempLockupBalance != _tempLockupBalance2 + _tempAmount) {
+            _tempAmount = _tempLockupBalance - _tempLockupBalance2;
+        }
+
+        emit Withdraw(msg.sender, token, _tempAmount, _data[msg.sender][token].timestamp);
+
+        /**
+         * @dev Reset the unblocking time to zero.
+         */
+        delete _data[msg.sender][token].timestamp;
         return true;
 
     }
@@ -628,25 +642,13 @@ contract AbyssSafeBase is ReentrancyGuard, Ownable {
         _tokens[_token].deposited = _balanceSafe;
     }
 
-    function calcDivFactorRequestedTotal(address _token, uint256 _lockupDivFactor, uint256 _lockupBalance) internal {
+    function calcDivFactorRequestedTotal(address _token, uint256 _lockupDivFactor) internal {
         _tokens[_token].requested = _tokens[_token].requested * _lockupDivFactor / _tokens[_token].divFactorRequested;
-        if (_lockupBalance > _tokens[_token].requested) {
-            if (_lockupBalance - _tokens[_token].requested == 1) {
-                _tokens[_token].requested = _lockupBalance;
-            }
-        }
         _tokens[_token].divFactorRequested = _lockupDivFactor;
     }
 
     function calcDivFactorDeposited(address _owner, address _token) internal {
         _data[_owner][_token].deposited = _data[_owner][_token].deposited * _tokens[_token].divFactorDeposited / _data[_owner][_token].divFactorDeposited;
-
-        if (_tokens[_token].deposited > _data[_owner][_token].deposited) {
-            if (_tokens[_token].deposited - _data[_owner][_token].deposited == 1) {
-                _data[_owner][_token].deposited = _tokens[_token].deposited;
-            }
-        }
-
         _data[_owner][_token].divFactorDeposited = _tokens[_token].divFactorDeposited;
     }
 
