@@ -221,6 +221,7 @@ contract AbyssSafeBase is ReentrancyGuard, Ownable {
                 calcDivFactorDepositedTotal(token, _tempBalanceSafe);
             } else {
                 lockupContract.externalTransfer(token, address(this), owner(), _tempBalanceSafe, 0);
+                _tempBalanceSafe = 0;
             }
         }
 
@@ -321,6 +322,7 @@ contract AbyssSafeBase is ReentrancyGuard, Ownable {
                 _tempLockupDivFactor = calcDivFactorLockup(_tempLockupDivFactor, _tempLockupBalance, _tempDepositedLockup);
             } else {
                 lockupContract.externalTransfer(token, address(lockupContract), owner(), _tempLockupBalance, 0);
+                _tempLockupBalance = 0;
             }
         }
 
@@ -431,6 +433,7 @@ contract AbyssSafeBase is ReentrancyGuard, Ownable {
                 calcDivFactorDepositedTotal(token, _tempBalanceSafe);
             } else {
                 lockupContract.externalTransfer(token, address(this), owner(), _tempBalanceSafe, 0);
+                _tempBalanceSafe = 0;
             }
         }
 
