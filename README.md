@@ -1,4 +1,4 @@
-MMAbyss Finance Lockup
+MMzAbyss Finance Lockup
 =========
 
 Abyss Lockup service allows you to lock any ERC20 token with strict period of withdrawal time:
