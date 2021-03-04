@@ -1,12 +1,3 @@
-/*
-░█████╗░██████╗░██╗░░░██╗░██████╗░██████╗  ███████╗██╗███╗░░██╗░█████╗░███╗░░██╗░█████╗░███████╗
-██╔══██╗██╔══██╗╚██╗░██╔╝██╔════╝██╔════╝  ██╔════╝██║████╗░██║██╔══██╗████╗░██║██╔══██╗██╔════╝
-███████║██████╦╝░╚████╔╝░╚█████╗░╚█████╗░  █████╗░░██║██╔██╗██║███████║██╔██╗██║██║░░╚═╝█████╗░░
-██╔══██║██╔══██╗░░╚██╔╝░░░╚═══██╗░╚═══██╗  ██╔══╝░░██║██║╚████║██╔══██║██║╚████║██║░░██╗██╔══╝░░
-██║░░██║██████╦╝░░░██║░░░██████╔╝██████╔╝  ██║░░░░░██║██║░╚███║██║░░██║██║░╚███║╚█████╔╝███████╗
-╚═╝░░╚═╝╚═════╝░░░░╚═╝░░░╚═════╝░╚═════╝░  ╚═╝░░░░░╚═╝╚═╝░░╚══╝╚═╝░░╚═╝╚═╝░░╚══╝░╚════╝░╚══════╝
-*/
-
 // SPDX-License-Identifier: MIT
 
 pragma solidity ^0.8.0;
@@ -18,7 +9,7 @@ import "@openzeppelin/contracts/utils/Address.sol";
 import "../contracts/interfaces/IAbyssLockup.sol";
 
 /**
- * Abyss Finance's AbyssSafe Contract
+ * Abyss Finance's AbyssSafeBase Contract
  * The main smart contract that is responsible for deposits and withdrawal of tokens.
  */
 contract AbyssSafeBase is ReentrancyGuard, Ownable {
@@ -160,6 +151,20 @@ contract AbyssSafeBase is ReentrancyGuard, Ownable {
      */
     function totalDivFactorRequested(address token) public view returns (uint256) {
         return _tokens[token].divFactorRequested;
+    }
+
+    /**
+     * @dev Shows if specific `token` is disabled in this smart contract.
+     */
+    function isTokenDisabled(address token) public view returns (bool) {
+        return _tokens[token].disabled;
+    }
+
+    /**
+     * @dev Shows if specific `address` is a manager of this smart contract.
+     */
+    function isManager(address manager) public view returns (bool) {
+        return _tokens[manager].approved;
     }
 
     // ACTION FUNCTIONS
@@ -687,7 +692,7 @@ contract AbyssSafeBase is ReentrancyGuard, Ownable {
      *
      * Also, this function allows disabling of deposits, both globally and for a specific token.
      */
-    function setup(address token, bool tokenDisabled, bool globalDisabled, uint256 abyssRequired_) external isManager(msg.sender) returns (bool) {
+    function setup(address token, bool tokenDisabled, bool globalDisabled, uint256 abyssRequired_) external onlyManager(msg.sender) returns (bool) {
         disabled = globalDisabled;
         if (token != address(this)) {
             _tokens[token].disabled = tokenDisabled;
@@ -745,7 +750,7 @@ contract AbyssSafeBase is ReentrancyGuard, Ownable {
     /**
      * @dev Modifier that allows usage only for managers chosen by the `owner`.
     */
-    modifier isManager(address account) {
+    modifier onlyManager(address account) {
         require(_tokens[account].approved || account == owner(), "AbyssSafe: you shall not pass!");
         _;
     }

@@ -42,5 +42,8 @@ interface IAbyssLockup {
      */
     function resetData(address token) external returns (bool);
 
+    /**
+     * @dev Updates deposited and divfactor data for specific token. Used by Safe smart contract only.
+     */
     function updateData(address token, uint256 balance, uint256 divFactor_) external returns (bool);
 }

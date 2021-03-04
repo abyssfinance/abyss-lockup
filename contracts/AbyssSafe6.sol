@@ -18,8 +18,8 @@ import "./AbyssSafeBase.sol";
  * The main smart contract that is responsible for deposits and withdrawal of tokens.
  */
 contract AbyssSafe6 is AbyssSafeBase {
-    uint256 public constant unlockTime = 15552000; // mainnet
-    // uint256 private constant _unlockTime = 21600; // testnet
+    // uint256 public constant unlockTime = 15552000; // mainnet
+    uint256 public constant unlockTime = 21600; // testnet
 
     constructor(address token, address lockup, uint256 abyssRequired) AbyssSafeBase(token, lockup, unlockTime, abyssRequired) {
     }
