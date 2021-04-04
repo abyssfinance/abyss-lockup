@@ -167,6 +167,13 @@ contract AbyssSafeBase is ReentrancyGuard, Ownable {
         return _tokens[manager].approved;
     }
 
+    /**
+     * @dev Shows the unlock period that you need to wait after withdrawal request.
+     */
+    function unlockTime() external virtual view returns (uint256) {
+        return _unlockTime;
+    }
+
     // ACTION FUNCTIONS
 
     /**

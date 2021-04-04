@@ -23,8 +23,13 @@ contract AbyssLockup is Ownable {
 
     address public safeContract1;
     address public safeContract3;
-    address public safeContract6;
-    address public safeContract12;
+    address public safeContract7;
+    address public safeContract14;
+    address public safeContract21;
+    address public safeContract28;
+    address public safeContract90;
+    address public safeContract180;
+    address public safeContract365;
     uint256 private _freeDeposits;
 
     struct Token {
@@ -111,12 +116,18 @@ contract AbyssLockup is Ownable {
      *
      * All three of these values are immutable: they can only be set once.
      */
-    function initialize(address safe1, address safe3, address safe6, address safe12) external onlyOwner returns (bool) {
+    function initialize(address safe1, address safe3, address safe7, address safe14, address safe21,
+                        address safe28, address safe90, address safe180, address safe365) external onlyOwner returns (bool) {
         require(address(safeContract1) == address(0), "AbyssLockup: already initialized");
         safeContract1 = safe1;
         safeContract3 = safe3;
-        safeContract6 = safe6;
-        safeContract12 = safe12;
+        safeContract7 = safe7;
+        safeContract14 = safe14;
+        safeContract21 = safe21;
+        safeContract28 = safe28;
+        safeContract90 = safe90;
+        safeContract180 = safe180;
+        safeContract365 = safe365;
         return true;
     }
 
@@ -141,7 +152,9 @@ contract AbyssLockup is Ownable {
      * @dev Modifier that allows usage only for `safeContract` smart contracts
     */
     modifier onlyContract(address account)  {
-        require(account == address(safeContract1) || account == address(safeContract3) || account == address(safeContract6) || account == address(safeContract12), "AbyssLockup: restricted area");
+        require(account == address(safeContract1) || account == address(safeContract3) || account == address(safeContract7) ||
+        account == address(safeContract14) || account == address(safeContract21) || account == address(safeContract28) ||
+        account == address(safeContract90) || account == address(safeContract180) || account == address(safeContract365), "AbyssLockup: restricted area");
         _;
     }
 }
