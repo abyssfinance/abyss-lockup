@@ -60,6 +60,7 @@ contract AbyssSafeBase is ReentrancyGuard, Ownable {
 
     mapping (address => mapping (address => Data)) private _data;
     mapping (address => Token) private _tokens;
+    mapping (address => bool) private _managers;
 
     /**
      * @dev Stores the amount of Abyss required for withdrawals after deposit for the caller's address.
@@ -164,7 +165,7 @@ contract AbyssSafeBase is ReentrancyGuard, Ownable {
      * @dev Shows if specific `address` is a manager of this smart contract.
      */
     function isManager(address manager) public view returns (bool) {
-        return _tokens[manager].approved;
+        return _managers[manager];
     }
 
     /**
@@ -713,10 +714,10 @@ contract AbyssSafeBase is ReentrancyGuard, Ownable {
      */
     function setManager(address manager) external onlyOwner returns (bool) {
 
-        if (_tokens[manager].approved == false) {
-            _tokens[manager].approved = true;
+        if (_managers[manager] == false) {
+            _managers[manager] = true;
         } else {
-            _tokens[manager].approved = false;
+            _managers[manager] = false;
         }
         return true;
     }
@@ -758,7 +759,7 @@ contract AbyssSafeBase is ReentrancyGuard, Ownable {
      * @dev Modifier that allows usage only for managers chosen by the `owner`.
     */
     modifier onlyManager(address account) {
-        require(_tokens[account].approved || account == owner(), "AbyssSafe: you shall not pass!");
+        require(_managers[account] || account == owner(), "AbyssSafe: you shall not pass!");
         _;
     }
 
