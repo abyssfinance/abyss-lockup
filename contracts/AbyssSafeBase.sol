@@ -5,7 +5,6 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import "@openzeppelin/contracts/utils/Address.sol";
 import "../contracts/interfaces/IAbyssLockup.sol";
 
 /**
@@ -189,11 +188,10 @@ contract AbyssSafeBase is ReentrancyGuard, Ownable {
      */
     function deposit(address token, uint256 amount, address receiver) public nonReentrant isAllowed(msg.sender, token) returns (bool) {
         require(disabled == false && _tokens[token].disabled == false, "AbyssSafe: disabled");
+        require(address(token) != address(0) && amount != 0, "AbyssSafe: variables cannot be 0");
         if (receiver == 0x0000000000000000000000000000000000000000) {
             receiver = msg.sender;
         }
-        require(Address.isContract(receiver) == false, "AbyssSafe: receiver cannot be a smart contract");
-        require(Address.isContract(token) == true, "AbyssSafe: token must be a smart contract");
 
         uint256 _tempFreeDeposits;
 
@@ -254,7 +252,7 @@ contract AbyssSafeBase is ReentrancyGuard, Ownable {
          */
         if (_tempFreeDeposits > 0) {
             _rates[receiver] = 0;
-        } else {
+        } else if (_data[receiver][token].deposited == 0 && _data[receiver][token].requested == 0) {
             _rates[receiver] = _abyssRequired;
         }
 
@@ -294,6 +292,7 @@ contract AbyssSafeBase is ReentrancyGuard, Ownable {
      * - User’s balance is greater than zero and greater than the amount they intend to deposit.
      */
     function request(address token, uint256 amount) external nonReentrant isAllowed(msg.sender, token) returns (bool) {
+        require(address(token) != address(0) && amount != 0, "AbyssSafe: variables cannot be 0");
         require(
             _rates[msg.sender] == 0 ||
             token == address(tokenContract) ||
@@ -418,6 +417,7 @@ contract AbyssSafeBase is ReentrancyGuard, Ownable {
      * - There is a pending active withdrawal request for `token` by the caller's account.
      */
     function cancel(address token) external nonReentrant isAllowed(msg.sender, token) returns (bool) {
+        require(address(token) != address(0), "AbyssSafe: variable cannot be 0");
         require(_data[msg.sender][token].requested > 0, "AbyssSafe: nothing to cancel");
 
         uint256 _tempAmount = _data[msg.sender][token].requested;
@@ -550,6 +550,7 @@ contract AbyssSafeBase is ReentrancyGuard, Ownable {
      * - User’s balance is greater than zero and greater than the amount they intend to deposit.
      */
     function withdraw(address token) external nonReentrant isAllowed(msg.sender, token) returns (bool) {
+        require(address(token) != address(0), "AbyssSafe: variable cannot be 0");
         require(
             _rates[msg.sender] == 0 ||
             token == address(tokenContract) ||
@@ -685,8 +686,10 @@ contract AbyssSafeBase is ReentrancyGuard, Ownable {
      * This value is immutable: it can only be set once.
      */
     function initialize(address lockupContract_) external onlyOwner returns (bool) {
+        require(address(lockupContract_) != address(0), "AbyssSafe: variable cannot be 0");
         require(address(lockupContract) == address(0), "AbyssSafe: already initialized");
         lockupContract = IAbyssLockup(lockupContract_);
+        emit Initialize(msg.sender, lockupContract_);
         return true;
     }
 
@@ -701,11 +704,13 @@ contract AbyssSafeBase is ReentrancyGuard, Ownable {
      * Also, this function allows disabling of deposits, both globally and for a specific token.
      */
     function setup(address token, bool tokenDisabled, bool globalDisabled, uint256 abyssRequired_) external onlyManager(msg.sender) returns (bool) {
+        require(address(token) != address(0), "AbyssSafe: variable cannot be 0");
         disabled = globalDisabled;
         if (token != address(this)) {
             _tokens[token].disabled = tokenDisabled;
         }
         _abyssRequired = abyssRequired_;
+        emit Setup(msg.sender, token, tokenDisabled, globalDisabled, abyssRequired_);
         return true;
     }
 
@@ -713,11 +718,13 @@ contract AbyssSafeBase is ReentrancyGuard, Ownable {
      * @dev Allows the `owner` to assign managers who can use the setup function.
      */
     function setManager(address manager) external onlyOwner returns (bool) {
-
+        require(address(manager) != address(0), "AbyssSafe: variable cannot be 0");
         if (_managers[manager] == false) {
             _managers[manager] = true;
+            emit AddManager(msg.sender, manager);
         } else {
             _managers[manager] = false;
+            emit RemoveManager(msg.sender, manager);
         }
         return true;
     }
@@ -730,12 +737,13 @@ contract AbyssSafeBase is ReentrancyGuard, Ownable {
      * only if the token balance is greater than the token balance deposited on the smart contract.
      */
     function withdrawLostTokens(address token) external onlyOwner returns (bool) {
+        require(address(token) != address(0), "AbyssSafe: variable cannot be 0");
         uint256 _tempBalance = IERC20(address(token)).balanceOf(address(this));
 
         if (_tokens[token].deposited == 0 && _tempBalance > 0) {
             SafeERC20.safeTransfer(IERC20(address(token)), msg.sender, _tempBalance);
+            emit WithdrawLostTokens(msg.sender, token, _tempBalance);
         }
-
         return true;
     }
 
@@ -743,7 +751,9 @@ contract AbyssSafeBase is ReentrancyGuard, Ownable {
      * @dev A function that allows to set allowance between this and lockup smart contract if something went wrong.
      */
     function manualApprove(address token) external returns (bool) {
+        require(address(token) != address(0), "AbyssSafe: variable cannot be 0");
         SafeERC20.safeApprove(IERC20(address(token)), address(lockupContract), 115792089237316195423570985008687907853269984665640564039457584007913129639935);
+        emit ManualApprove(msg.sender, token);
         return true;
     }
 
@@ -767,4 +777,11 @@ contract AbyssSafeBase is ReentrancyGuard, Ownable {
     event Request(address indexed user, address token, uint256 amount, uint256 timestamp);
     event Cancel(address indexed user, address token, uint256 amount, uint256 timestamp);
     event Withdraw(address indexed user, address token, uint256 amount, uint256 timestamp);
+    event Initialize(address indexed user, address indexed smartContract);
+    event Setup(address indexed user, address token, bool tokenDisabled, bool globalDisabled, uint256 abyssRequired);
+    event AddManager(address indexed user, address manager);
+    event RemoveManager(address indexed user, address manager);
+    event WithdrawLostTokens(address indexed user, address token, uint256 amount);
+    event ManualApprove(address indexed user, address token);
+
 }
