@@ -187,7 +187,7 @@ contract AbyssSafeBase is ReentrancyGuard, Ownable {
      * - User’s balance is greater than zero and greater than the amount they intend to deposit.
      */
     function deposit(address token, uint256 amount, address receiver) public nonReentrant isAllowed(msg.sender, token) returns (bool) {
-        require(disabled == false && _tokens[token].disabled == false, "AbyssSafe: disabled");
+        require(!disabled && !_tokens[token].disabled, "AbyssSafe: disabled");
         require(address(token) != address(0) && amount != 0, "AbyssSafe: variables cannot be 0");
         if (receiver == 0x0000000000000000000000000000000000000000) {
             receiver = msg.sender;
@@ -206,12 +206,12 @@ contract AbyssSafeBase is ReentrancyGuard, Ownable {
         /**
          * @dev Verifies that the `lockupContract` has permission to move a given token located on this contract.
          */
-        if (_tokens[token].approved == false) {
+        if (!_tokens[token].approved) {
 
             /**
              * @dev Add permission to move `token` from this contract for `lockupContract`.
              */
-            SafeERC20.safeApprove(IERC20(address(token)), address(lockupContract), 115792089237316195423570985008687907853269984665640564039457584007913129639935);
+            SafeERC20.safeApprove(IERC20(address(token)), address(lockupContract), type(uint256).max);
             /**
              * @dev Verify that the permission was correctly applied to exclude any future uncertainties.
              */
@@ -402,8 +402,6 @@ contract AbyssSafeBase is ReentrancyGuard, Ownable {
          * @dev The requested amount of the caller's tokens for withdrawal request becomes equal to the amount requested.
          */
         _data[msg.sender][token].requested = amount;
-
-        _tempLockupBalance = _tempLockupBalance + amount;
 
         emit Request(msg.sender, token, amount, _data[msg.sender][token].timestamp);
         return true;
@@ -717,9 +715,9 @@ contract AbyssSafeBase is ReentrancyGuard, Ownable {
     /**
      * @dev Allows the `owner` to assign managers who can use the setup function.
      */
-    function setManager(address manager) external onlyOwner returns (bool) {
+    function toggleManager(address manager) external onlyOwner returns (bool) {
         require(address(manager) != address(0), "AbyssSafe: variable cannot be 0");
-        if (_managers[manager] == false) {
+        if (!_managers[manager]) {
             _managers[manager] = true;
             emit AddManager(msg.sender, manager);
         } else {

@@ -13,12 +13,13 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "../contracts/interfaces/IAbyssLockup.sol";
 
 /**
  * Abyss Finance's AbyssLockup Contract
  * A smart contract that stores tokens requested for withdrawal, as well as through which tokens are transferred from/to user and between contracts.
  */
-contract AbyssLockup is Ownable {
+contract AbyssLockup is IAbyssLockup, Ownable {
     using SafeERC20 for IERC20;
 
     address public safeContract1;
@@ -48,21 +49,21 @@ contract AbyssLockup is Ownable {
     /**
      * @dev See {IAbyssLockup-deposited}.
      */
-    function deposited(address token) external view returns (uint256) {
+    function deposited(address token) external override view returns (uint256) {
         return _tokens[token].deposited;
     }
 
     /**
      * @dev See {IAbyssLockup-divFactor}.
      */
-    function divFactor(address token) external view returns (uint256) {
+    function divFactor(address token) external override view returns (uint256) {
         return _tokens[token].divFactor;
     }
 
     /**
      * @dev See {IAbyssLockup-freeDeposits}.
      */
-    function freeDeposits() public view returns (uint256) {
+    function freeDeposits() public override view returns (uint256) {
         return _freeDeposits;
     }
 
@@ -71,7 +72,7 @@ contract AbyssLockup is Ownable {
     /**
      * @dev See {IAbyssLockup-externalTransfer}.
      */
-    function externalTransfer(address token, address sender, address recipient, uint256 amount, uint256 abyssRequired) external onlyContract(msg.sender) returns (bool) {
+    function externalTransfer(address token, address sender, address recipient, uint256 amount, uint256 abyssRequired) external override onlyContract(msg.sender) returns (bool) {
         require(address(token) != address(0) && address(sender) != address(0) && address(recipient) != address(0), "AbyssLockup: variables cannot be 0");
         if (sender == address(this)) {
             IERC20(address(token)).safeTransfer(recipient, amount);
@@ -81,11 +82,11 @@ contract AbyssLockup is Ownable {
             }
             IERC20(address(token)).safeTransferFrom(sender, recipient, amount);
         }
-        emit ExternalTransfer(msg.sender, token, sender, recipient, amount, abyssRequired);
+        emit ExternalTransfer(msg.sender, token, sender, recipient, amount);
         return true;
     }
 
-    function resetData(address token) external onlyContract(msg.sender) returns (bool) {
+    function resetData(address token) external override onlyContract(msg.sender) returns (bool) {
         require(address(token) != address(0), "AbyssLockup: variable cannot be 0");
         delete _tokens[token].deposited;
         delete _tokens[token].divFactor;
@@ -93,7 +94,7 @@ contract AbyssLockup is Ownable {
         return true;
     }
 
-    function updateData(address token, uint256 balance, uint256 divFactor_) external onlyContract(msg.sender) returns (bool) {
+    function updateData(address token, uint256 balance, uint256 divFactor_) external override onlyContract(msg.sender) returns (bool) {
         require(address(token) != address(0), "AbyssLockup: variable cannot be 0");
         _tokens[token].deposited = balance;
         if (divFactor_ == 1) {
@@ -108,23 +109,19 @@ contract AbyssLockup is Ownable {
     // ADMIN FUNCTIONS
 
     /**
-     * @dev Configurates smart contract allowing modification in the amount of
-     * free deposits.
+     * @dev See {IAbyssLockup-setup}.
      */
-    function setup(uint256 freeDeposits__) external onlyOwner returns (bool) {
+    function setup(uint256 freeDeposits__) external override onlyOwner returns (bool) {
         _freeDeposits = freeDeposits__;
         emit Setup(msg.sender, freeDeposits__);
         return true;
     }
 
     /**
-     * @dev Initializes configuration of a given smart contract, with a specified
-     * addresses for the `safeContract` smart contracts.
-     *
-     * All three of these values are immutable: they can only be set once.
+     * @dev See {IAbyssLockup-initialize}.
      */
     function initialize(address safe1, address safe3, address safe7, address safe14, address safe21,
-                        address safe28, address safe90, address safe180, address safe365) external onlyOwner returns (bool) {
+                        address safe28, address safe90, address safe180, address safe365) external override onlyOwner returns (bool) {
         require(address(safe1) != address(0) && address(safe3) != address(0) && address(safe7) != address(0) &&
                 address(safe14) != address(0) && address(safe21) != address(0) && address(safe28) != address(0) &&
                 address(safe90) != address(0) && address(safe180) != address(0) && address(safe365) != address(0), "AbyssLockup: variables cannot be 0");
@@ -143,14 +140,9 @@ contract AbyssLockup is Ownable {
     }
 
     /**
-     * @dev A function that allows the `owner` to withdraw any locked and lost tokens
-     * from the smart contract if such `token` is not yet deposited.
-     *
-     * NOTE: Embedded in the function is verification that allows for token withdrawal
-     * only if the token balance is greater than the token balance requested to
-     * withdrawals on all `safeContract` smart contracts.
+     * @dev See {IAbyssLockup-withdrawLostTokens}.
      */
-    function withdrawLostTokens(address token) external onlyOwner returns (bool) {
+    function withdrawLostTokens(address token) external override onlyOwner returns (bool) {
         require(address(token) != address(0), "AbyssLockup: variable cannot be 0");
         uint256 _tempBalance = IERC20(address(token)).balanceOf(address(this));
 
@@ -170,12 +162,5 @@ contract AbyssLockup is Ownable {
         account == address(safeContract90) || account == address(safeContract180) || account == address(safeContract365), "AbyssLockup: restricted area");
         _;
     }
-
-    event ExternalTransfer(address indexed SmartContract, address token, address sender, address recipient, uint256 amount, uint256 abyssRequired);
-    event UpdateData(address indexed SmartContract, address token, uint256 balance, uint256 divFactor);
-    event ResetData(address indexed SmartContract, address token);
-    event Setup(address indexed user, uint256 freeDeposits);
-    event Initialize(address indexed user, address safe1, address safe3, address safe7, address safe14, address safe21, address safe28, address safe90, address safe180, address safe365);
-    event WithdrawLostTokens(address indexed user, address token, uint256 amount);
 
 }
